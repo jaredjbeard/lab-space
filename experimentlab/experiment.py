@@ -6,6 +6,7 @@ __license__ = "BSD-3"
 __docformat__ = 'reStructuredText'
 __author__ = "Jared Beard"
 
+from importlib.resources import path
 import sys
 import os
 
@@ -20,9 +21,6 @@ import json
 import numpy as np
 from copy import deepcopy
 import pickle
-
-import gym
-import irl_gym
 
 import nestifydict as nd
 import sampler
@@ -315,27 +313,54 @@ class RunExperiment():
             return deepcopy(trials)
         
         
-
-### -----------------------------------------------------------------
-### -----------------------------------------------------------------
-### -----------------------------------------------------------------
+# "core default" is where things are initialized this includes file os.pathsep
+# "config" in core contains the operating file path and settings for expt backend
+# "default contains some default parameters for experimental config" Users are meant to replace this guy
+"""
+Main does the following
+    - Loads the core config which has default file paths from install (to change this use reconfigurator or manually edit)
+    - Loads config file for experiment as required parameter
+    - if "-r" used, default config will be reset to initial config
+"""
 if __name__=='__main__':
-    alg_config_file = sys.argv[1]
-    env_config_file = sys.argv[2]
-    core_config_file = parent + "config/core/core.json"
     
-    n_trials = 1
-    n_threads = 1
-    clear_save = True
+    if len(sys.argv) == 2 and sys.argv[1] == "-r":
+        rc.replace_file("/config/core/config.json", "/config/core/core_default.json")
+        exit("Reset core")
+    if len(sys.argv) == 2 and sys.argv[1] == "-h":
+        with open("/core/core.json", "r+") as f:
+            core_config = json.load(f)
+            core_config["path"] = os.getcwd()
+            exit("Current File Path updated to this directory")
     
-    if len(sys.argv >= 4):
-        n_trials = sys.argv[3]
-    if len(sys.argv) >= 5: 
-        n_threads = int(sys.argv[4])
-    if len(sys.argv) >= 6:
-        clear_save = bool(int(sys.argv[5]))
+    with open("/core/core.json", "rb") as f:
+        core_config = json.load(f)
         
-    expts = RunExperiment(alg_config_file, env_config_file, core_config_file, n_trials, n_threads, clear_save)
+    if len(sys.argv) >= 1:
+        i = 1;
+        while i < len(sys.argv):
+            if sys.argv[i] == "--trials":
+                
+                i += 2
+            elif sys.argv[i] == "--threads":
+                
+                i += 2
+            elif sys.argv[i] == "-c":
+                
+                i += 1
+                
+            elif sys.argv[i] == "--core-config":
+                
+                i += 2
+            
+            else:
+                with open(core_config["path"] + sys.argv[i], "rb") as f:
+                    expt_config = json.load(f)
+                i += 1
+                
+    
+        
+    expts = RunExperiment(alg_config_file, core_config_file, n_trials, n_threads, clear_save)
     
     expts.run()
 

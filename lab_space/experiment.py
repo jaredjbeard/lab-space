@@ -14,20 +14,18 @@ current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 
+from abc import ABC,abstractmethod
 from multiprocessing import Pool, Lock
 import logging
 import itertools
-import json 
 import numpy as np
 from copy import deepcopy
 import pickle
 
 import nestifydict as nd
-import sampler
+import reconfigurator as rc
 
-from planners.utils import *
-
-class RunExperiment():
+class Experiment():
     """
     Performs experimental trials for a given algorithm and gym environment
     
@@ -47,7 +45,7 @@ class RunExperiment():
     """
     def __init__(self, alg_file : str, env_file : str, core_file: str, n_trials : int = 1, n_threads : int = 1, log_level : str = "WARNING", file_name : str = None, clear_save : bool = False):
         
-        super(RunExperiment, self).__init__()
+        super(Experiment, self).__init__()
         
         log_levels = {"NOTSET": logging.NOTSET, "DEBUG": logging.DEBUG, "INFO": logging.INFO, "WARNING": logging.WARNING, "ERROR": logging.ERROR ,"CRITICAL": logging.CRITICAL}
         self._log_level = log_levels[log_level]
@@ -87,73 +85,20 @@ class RunExperiment():
         
         self.__lock = lock = Lock() 
             
-    def _list_trials(self):
+    def list_trials(self):
         """
         Generates a set of trials from the environment and algorithm params provided
 
         :return: (list(dict)) contains list of the parameters for each algorithm
         """
-        self._log.warn("Generating Trials for ")
-        # Generate algorithm params
-        self._log.warn("...planning algorithms")
-        algs = [] 
-        for el in self._alg_config["algs"]:
-            algs.append(self.__expand_trials(el))
-            
-        # Generate Environment params
-        self._log.warn("...environments")
-        envs = []
-        for el in self._env_config["envs"]:
-            algs.append(self.__expand_trials(el))
         
-        # Combine experiments
-        self._log.warn("...combining")
-        expts = []
-        temp = list(itertools.product(*[algs,envs]))  
-        for i,el in enumerate(temp):
-            temp[i] = {"alg":deepcopy(el[0]), "env":deepcopy(el[1])}
-        for i in self._n_trials:
-            for el in temp:
-                temp_sampled = deepcopy(el)
-                if "sample" in self._alg_default:
-                    sampler.sample_all(self._alg_default["sample"], temp_sampled["alg"])
-                if "sample" in self._env_default:
-                    sampler.sample_all(self._env_default["sample"], temp_sampled["env"])
-
-                expts += temp_sampled
-
-        return expts
     
-    def _generator_trials(self):
+    def generator_trials(self):
         """
         Generator implementation for yielding a set of trials from the environment and algorithm params provided
 
         :return: (list(dict)) contains list of the parameters for each algorithm
         """
-        self._log.warn("Generating Trials for ")
-        # Generate algorithm params
-        self._log.warn("...planning algorithms")
-        algs = [] 
-        for el in self._alg_config["algs"]:
-            algs.append(self.__expand_trials(el))
-            
-        # Generate Environment params
-        self._log.warn("...environments")
-        envs = []
-        for el in self._env_config["envs"]:
-            algs.append(self.__expand_trials(el))
-        
-        # Combine experiments
-        self._log.warn("...combining")
-        for el in itertools.product(*[algs,envs]):
-            temp = {"alg":deepcopy(el[0]), "env":deepcopy(el[1])}
-            for i in self._n_trials:
-                if "sample" in self._alg_default:
-                    sampler.sample_all(self._alg_default["sample"], temp["alg"])
-                if "sample" in self._env_default:
-                    sampler.sample_all(self._env_default["sample"], temp["env"])
-
-                yield temp
     
     def _start_pool(self, expts):
         """
@@ -183,6 +128,64 @@ class RunExperiment():
         
         self._log.warn("Pool closed, simulations complete")        
 
+    def _simulate_save(self, params : dict):
+        """
+        Simulates and saves a single experimental trial
+        
+        :param params: (dict) Contains "alg" and "env" with corresponding params
+        """
+        self._log.debug("Simulation")
+        env = gym.make(params["env"]["env"],max_episode_steps = params["env"]["max_time"], params=params["env"]["params"])
+        s = env.reset()
+        params["env"]["state"] = deepcopy(s)
+        planner = get_agent(params["alg"]["params"],params["env"])
+
+        done = False
+        ts = 0
+        accum_reward = 0
+
+        while(not done):
+            a = planner.evaluate(s, params["alg"]["search"])
+            s, r,done, is_trunc, info = env.step(a)
+            done = done or is_trunc
+            ts += 1
+            accum_reward += r
+
+        self._log.debug("Simulation complete")
+        if self.__fp is not None:
+            with open(self.__fp, "rb") as f:
+                data = pickle.load(f)
+                self._log.warn("Accessed database")
+            data.append(params)
+            with open(self.__fp, "wb") as f:
+                pickle.dump(data,f)
+                self._log.warn("Saved to database")
+
+    def _simulate(self, params : dict) -> dict:
+        """
+        Simulates and saves a single experimental trial
+        
+        :param params: (dict) Contains "alg" and "env" with corresponding params
+        """
+        self._log.debug("Simulation")
+        env = gym.make(params["env"]["env"],max_episode_steps = params["env"]["max_time"], params=params["env"]["params"])
+        s = env.reset()
+        params["env"]["state"] = deepcopy(s)
+        planner = get_agent(params["alg"]["params"],params["env"])
+
+        done = False
+        ts = 0
+        accum_reward = 0
+
+        while(not done):
+            a = planner.evaluate(s, params["alg"]["search"])
+            s, r,done, is_trunc, info = env.step(a)
+            done = done or is_trunc
+            ts += 1
+            accum_reward += r
+
+        self._log.debug("Simulation complete")
+        return params
     
     def _simulate(self, params : dict):
         """

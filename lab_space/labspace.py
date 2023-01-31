@@ -18,6 +18,8 @@ import argparse
 import json
 import reconfigurator.reconfigurator as rc
 
+from experiment.experiment import Experiment
+
 if __name__=='__main__':  
     
     parser = argparse.ArgumentParser(description='Lab Space CLI')
@@ -26,8 +28,10 @@ if __name__=='__main__':
     parser.add_argument('-th', '--num_threads', type=int, nargs = 1,  help='Number of threads to run')
     parser.add_argument('-cs',  '--clear-save', type=str, nargs = 0,  help='Clears save file')
     parser.add_argument('-p',  '--print',       type=str, nargs = 0,  help='Prints config file')
-    parser.add_argument('-s',  '--set',         type=str, nargs ="+", help='Sets variable in config file')
-    parser.add_argument('-rs', '--reset',       type=str, nargs = 0,  help='Resets variables in config file')
+    parser.add_argument('-st',  '--set_trial',         type=str, nargs ="+", help='Sets variable in trial config file')
+    parser.add_argument('-se',  '--set_experiment',         type=str, nargs ="+", help='Sets variable in experiment config file')
+    parser.add_argument('-rt', '--reset_trials',       type=str, nargs = 0,  help='Resets variables in trial config file')
+    parser.add_argument('-re', '--reset_experiment',       type=str, nargs = 0,  help='Resets variables in experiment config file')
     parser.add_argument('-c',  '--compile',     type=str, nargs = 1,  help='Compiles config file')
     parser.add_argument('-l',  '--loglevel',    type=str, nargs = 1,  help='Sets log level')
 
@@ -42,30 +46,69 @@ if __name__=='__main__':
     trial_fp = config["trials_config"]
     if hasattr(args, "run") and args.run is not None:
         trial_fp = config["trial_path"] + "/" + args.run[0]
+        if len(args.run) > 1:
+            trial_fp += config["save_path"] + args.run[1]
+        else:
+            trial_fp += config["save_path"] + config["save_file"]
     with open(trial_fp, "r") as f:
         trials_config = json.load(f)
 
-   
     if hasattr(args, "print"):
-        print_config_file(getattr(args,"print")[0])
-    if hasattr(args, "setpath"):
-        set_abs_path(getattr(args,"setpath")[0])
-    if hasattr(args, "resetpath"):
-        reset_abs_path()
-    if hasattr(args, "replace"):
-        replace_file(getattr(args,"replace")[0],getattr(args,"replace")[1])
-    if hasattr(args, "merge"):
-        merge_file(getattr(args,"merge"))  
-    if hasattr(args, "merge-recrusive"):
-        merge_file(getattr(args,"merge-recrusive"), True)  
-    if hasattr(args, "update"):
+        print(f'{"Trial Config":-<20}')
+        rc.print_config_file(trials_config)
+        print(f'{"Experiment Config":-<20}')
+        rc.print_config_file(expt_config)
+
+    if hasattr(args, "num_trials") and args.num_trials is not None:
+        expt_config["num_trials"] = args.num_trials[0]
+    if hasattr(args, "num_threads") and args.num_threads is not None:
+        expt_config["num_threads"] = args.num_threads[0]
+    if hasattr(args, "clear-save") and args.clear_save is not None:
+        expt_config["clear_save"] = True
+    if hasattr(args, "print"):
+        print(f'{"Trial Config":-<20}')
+        rc.print_config_file(trials_config)
+        print(f'{"Experiment Config":-<20}')
+        rc.print_config_file(expt_config)
+
+    if hasattr(args, "reset_trials"):
         val = []
         var = []
         i = 1
-        while i < len(args.update):
-            val.append(getattr(args,"update")[i])
-            val.append(getattr(args,"update")[i+1])
+        while i < len(args.set_trial):
+            val.append(getattr(args,"reset_trials")[i])
+            val.append(getattr(args,"reset_trials")[i+1])
             i += 1
-        update_file(val, var, getattr(args,"update")[0], True)
-    if hasattr(args, "compile"):
-        compile_config_file(getattr(args,"compile")[0])
+        rc.update_file(val, var, getattr(args,"set_trial")[0], True)
+    
+    if hasattr(args, "reset_experiment"):
+        val = []
+        var = []
+        i = 1
+        while i < len(args.set_experiment):
+            val.append(getattr(args,"reset_experiment")[i])
+            val.append(getattr(args,"reset_experiment")[i+1])
+            i += 1
+        rc.update_file(val, var, getattr(args,"set_experiment")[0], True)
+
+    if hasattr(args, "reset_trial"):
+        default_trials_config = rc.read_file("config/core/core_default.json")["trials_config"]
+        rc.write_file(trial_fp, default_trials_config)
+    if hasattr(args, "reset_experiment"):
+        default_expt_config = rc.read_file("config/core/core_default.json")["expt_config"]
+        rc.write_file(config["expt_config"], default_expt_config)
+    if 
+
+    parser.add_argument('-rs', '--reset',       type=str, nargs = 0,  help='Resets variables in config file')
+    parser.add_argument('-c',  '--compile',     type=str, nargs = 1,  help='Compiles config file')
+    parser.add_argument('-l',  '--loglevel',    type=str, nargs = 1,  help='Sets log level')
+
+
+    if hasattr(args, "run"):
+        expt = Experiment(trials_config, expt_config)
+        expt.run()
+
+    # Need to set core files which hold path variables
+    # core default holds default values for core files and expt/trial config files
+    # Need to set expt type, so we need a method to register them. 
+    # Need a function to make them callable.  -> Maybe we make the CLI inheritable then users can add their own commands

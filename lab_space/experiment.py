@@ -31,8 +31,8 @@ class Experiment():
         - *default*: None
         - "experiment": (func) Reference to function under test
         - "n_trials": (int) Number of trials to run for each set of parameters, *default*: 1
-        - "n_threads": (int) Number of threads to use, *default*: 1
-        - "file_name": (str) file to save data, if none does not save, *default*: None
+        - "n_processes": (int) Number of processes to use, *default*: 1
+        - "save_file": (str) file to save data, if none does not save, *default*: None
         - "clear_save": (bool) clears data from pickle before running experiment, *default*: False
     :param log_level: (str) Logging level, *default*: "WARNING"
     """
@@ -46,7 +46,7 @@ class Experiment():
         logging.basicConfig(stream=sys.stdout, format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s', level=self._expt_config["log_level"])
         self._log = logging.getLogger(__name__)
         
-        self._log.warn("RunExperiment Init, perform " + str(expt_config["n_trials"]) + " trials across " + str(expt_config["n_threads"]) + "threads")
+        self._log.warn("RunExperiment Init, perform " + str(expt_config["n_trials"]) + " trials across " + str(expt_config["n_processes"]) + "processes")
 
         self.__lock = Lock()
 
@@ -67,14 +67,14 @@ class Experiment():
             raise ValueError("Must provide experiment function")
         if "n_trials" not in expt_config:
             expt_config["n_trials"] = 1
-        if "n_threads" not in expt_config:
-            expt_config["n_threads"] = 1
-        if "file_name" not in expt_config:
-            expt_config["file_name"] = None
+        if "n_processes" not in expt_config:
+            expt_config["n_processes"] = 1
+        if "save_file" not in expt_config:
+            expt_config["save_file"] = None
         if "clear_save" not in expt_config:
             expt_config["clear_save"] = False
-        elif expt_config["clear_save"] and expt_config["file_name"] is not None:
-            with open(expt_config["file_name"], 'wb') as f:
+        elif expt_config["clear_save"] and expt_config["save_file"] is not None:
+            with open(expt_config["save_file"], 'wb') as f:
                     pickle.dump([],f)
         self._expt_config = expt_config
         self._log.warn("Reset experiment")
@@ -97,7 +97,7 @@ class Experiment():
         self._log.warn("Run experiment")
         self._results = []
 
-        if self._expt_config["n_threads"] == 1:
+        if self._expt_config["n_processes"] == 1:
             return self._run_single()
         return self._run_multi()
 
@@ -108,18 +108,18 @@ class Experiment():
         self._log.warn("Run experiment in single thread")
         results = []
         for trial in self.__n_iterable(self._trial_config, self._expt_config["n_trials"]):
-            if self._expt_config["file_name"] is not None:
+            if self._expt_config["save_file"] is not None:
                 results.append(self._run_save(trial))
             results.append(self._expt_config["experiment"](trial))
         return results
 
     def _run_multi(self):
         """
-        Run experiment in multiple threads
+        Run experiment in multiple processes
         """
-        self._log.warn("Run experiment in multiple threads")
-        with Pool(self._expt_config["n_threads"]) as p:
-            if self._expt_config["file_name"] is not None:
+        self._log.warn("Run experiment in multiple processes")
+        with Pool(self._expt_config["n_processes"]) as p:
+            if self._expt_config["save_file"] is not None:
                 return p.map(self._run_save, self._n_iterable(self._trial_config, self._expt_config["n_trials"]))
             return p.map(self._expt_config["experiment"], self._n_iterable(self._trial_config, self._expt_config["n_trials"]))
 
@@ -131,7 +131,7 @@ class Experiment():
         """
         result = self._expt_config["experiment"](trial_config)
         with self.__lock:
-            with open(self._expt_config["file_name"], "r+") as f:
+            with open(self._expt_config["save_file"], "r+") as f:
                 data = pickle.load(f)
                 data.append(result)
                 pickle.dump(data,f)  

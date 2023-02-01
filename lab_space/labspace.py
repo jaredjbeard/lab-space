@@ -17,7 +17,7 @@ sys.path.append(parent)
 import argparse
 import json
 import reconfigurator.reconfigurator as rc
-from reconfigurator.compile import compile_as_generator
+from reconfigurator.compile import compile_as_generator, compile_to_list
 
 from experiment.experiment import Experiment
 
@@ -86,11 +86,13 @@ if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Lab Space CLI')
     parser.add_argument('-r',   '--run',                                  nargs = 0,  help='Runs algorithm, if unspecified runs user default')
+    
     parser.add_argument('-up',  '--Update_path',                type=str, nargs ="+", help='Updates path of both config files, if unspecified resets to factory default')
     parser.add_argument('-utp', '--Update_trial_path',          type=str, nargs ="+", help='Updates path of trial config files, if unspecified resets to factory default')
     parser.add_argument('-ut',  '--Update_trial',               type=str, nargs ="+", help='Updates file name for trial config, if unspecified resets to factory default')
     parser.add_argument('-uep', '--Update_experiment_path',     type=str, nargs ="+", help='Updates path of experiment config files, if unspecified resets to factory default')
     parser.add_argument('-ue',  '--Update_experiment',          type=str, nargs ="+", help='Updates file name for experiment config, if unspecified resets to factory default')
+    
     parser.add_argument('-nt',  '--num_trials',                 type=int, nargs = 1,  help='Number of trials to run')
     parser.add_argument('-np',  '--num_processes',              type=int, nargs = 1,  help='Number of processes to run')
     parser.add_argument('-cs',  '--clear-save',                 type=bool,nargs ="+", help='Clears save file, default is true')
@@ -104,6 +106,7 @@ if __name__=='__main__':
     parser.add_argument('-sc',   '--save_core',                           nargs ="+", help='Saves settings for core')
     parser.add_argument('-st',   '--save_trial',                type=str, nargs ="+", help='Saves settings for trial data, if argument specified saves to that file in path')
     parser.add_argument('-se',   '--save_path',                 type=str, nargs ="+", help='Saves settings for experiment data, if argument specified saves to that file in path')
+    
     parser.add_argument('-p',  '--print',                       type=str, nargs = 0,  help='Prints config file')
 
     args = parser.parse_args()
@@ -158,7 +161,11 @@ if __name__=='__main__':
     if hasattr(args, "function"):
         expt_config["function"] = args.function[0]
     if hasattr(args, "compile"):
-        trial_config = compile_as_generator(trial_config)
+        if hasattr(args, "save") or hasattr(args, "save_trial"):
+            trial_config = compile_to_list(trial_config)
+        else:
+            trial_config = compile_as_generator(trial_config)
+        
 
     # Function Registration -----------------------------------------------------------------
     if hasattr(args, "function_register"):

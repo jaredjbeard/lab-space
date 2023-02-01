@@ -24,6 +24,12 @@ from experiment.experiment import Experiment
 import sys
 import importlib.util
 
+##########
+"""
+Add default saving location to config file in add cli.
+"""
+##########
+
 # add core defaults to config file in add cli. 
 ### Need to also test whether the function is callable.
 # def call_function(module_path, module_name, func_name, *args):
@@ -46,6 +52,7 @@ import importlib.util
 # print(result)  # Output: 7
 
 ## I should add a register function. 
+
 
 def register_experiment(experiment_path, experiment_file):
     """

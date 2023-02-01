@@ -21,29 +21,28 @@ import itertools
 import numpy as np
 from copy import deepcopy
 import pickle
+import json
 
 import nestifydict as nd
 import reconfigurator as rc
 
 class Experiment():
     """
-    Performs experimental trials for a given algorithm and gym environment
-    
-    *If using sample_expt, remember that this will affect `n_trials`. Depending on how an experiment is defined,
-    this could lead to double counting and an explosion in simulations.* 
-    If both are being used, it is recommented to set n_trials to no more than 5 unless 
-    a deep investigation into a given state is needed.
-    
-    :param alg_file: (str) Filename for algorithm params (see :doc:`config/core/get_defaults.py` for default path and :ref:`Config <config>` for specification)
-    :param env_file: (str) Filename for env params (see :doc:`config/core/get_defaults.py` for default path and :ref:`Config <config>` for specification)
-    :param core_file: (str) Filename for system params (such as file paths (see :doc:`config/operational.json` for defaults and :ref:`Update Config <update_config>` for command tools))
-    :param n_trials: (int) Number of trials to run for each set of parameters, *default*: 1
-    :param n_threads: (int) Number of threads to use, *default*: 1
-    :param log_level: (str) Log level (does not override default values), *default*: WARNING
-    :param file_name: (str) file to save data (default path is "~/data/"), if none does not save, *default*: None
-    :param clear_save: (bool) clears data from pickle before running experiment, *default*: False
+    Perform trials for a given set of experiments. 
+
+    Users should provide two parameter files.
+
+    :param trial_config: (list(dict) or generator) Configurations for each trial, *default*: None
+    :param expt_config: (dict) Experiment configuration file containing the following keys:
+        - *default*: None
+        - "experiment": (func) Reference to function under test
+        - "n_trials": (int) Number of trials to run for each set of parameters, *default*: 1
+        - "n_threads": (int) Number of threads to use, *default*: 1
+        - "file_name": (str) file to save data, if none does not save, *default*: None
+        - "clear_save": (bool) clears data from pickle before running experiment, *default*: False
+    :param log_level: (str) Logging level, *default*: "WARNING"
     """
-    def __init__(self, alg_file : str, env_file : str, core_file: str, n_trials : int = 1, n_threads : int = 1, log_level : str = "WARNING", file_name : str = None, clear_save : bool = False):
+    def __init__(self, trial_config = None, expt_config : dict = None, log_level : str = "WARNING"):
         
         super(Experiment, self).__init__()
         
@@ -53,246 +52,304 @@ class Experiment():
         logging.basicConfig(stream=sys.stdout, format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s', level=self._expt_config["log_level"])
         self._log = logging.getLogger(__name__)
         
-        self._log.warn("RunExperiment Init, perform " + str(n_trials) + " trials across " + str(n_threads) + "threads")
+        self._log.warn("RunExperiment Init, perform " + str(expt_config["n_trials"]) + " trials across " + str(expt_config["n_threads"]) + "threads")
+
+        self.reset(trial_config, expt_config)
         
-        f = open(parent + "/config/alg/" + alg_file +  ".json")
-        self._alg_config = json.load(f)
-        f.close()
-        self._alg_default = self._alg_config.pop('default', None)
-        if "log_level" not in self._alg_default:
-            self._alg_default["log_level"] = log_level
-        self._log.warn("Accessed algorithm configuration")
-        
-        f = open(parent + "/config/env/" + env_file +  ".json")
-        self._env_config = json.load(f)  
-        f.close()
-        self._env_default = self._env_config.pop('default', None)
-        if "log_level" not in self._env_default:
-            self._env_default["log_level"] = log_level
-        self._log.warn("Accessed Environment configuration") 
-        
-        self._n_trials = n_trials
-        self._n_threads = n_threads  
-        
-        if file_name is not None:
-            self.__fp = os.path.dirname(__file__) + "/data/" + file_name + ".pkl"
-            self._log.warn("Save path set to " + self.__fp)
-            if clear_save:
-                with open(self.__fp, 'wb') as f:
-                    pickle.dump([],f)
+    def reset(self, trial_config = None, expt_config = None):
+        """
+        Reset experiment with new configurations
+
+        :param trial_config: (list(dict)) Configurations for each trial, *default*: None
+        :param expt_config: (dict) Experiment configuration, *default*: None
+        """
+        if trial_config is not None:
+            self._trial_config = trial_config
+        if expt_config is not None:
+            expt_config = {}
+        if "experiment" not in expt_config:
+            raise ValueError("Must provide experiment function")
+        if "n_trials" not in expt_config:
+            expt_config["n_trials"] = 1
+        if "n_threads" not in expt_config:
+            expt_config["n_threads"] = 1
+        if "file_name" not in expt_config:
+            expt_config["file_name"] = None
+        if "clear_save" not in expt_config:
+            expt_config["clear_save"] = False
+        self._expt_config = expt_config
+        self._log.warn("Reset experiment")
+
+    def run(self, trial_config = None, expt_config = None):
+        """
+        Run experiment with new configurations
+
+        :param trial_config: (list(dict)) Configurations for each trial, *default*: None
+        :param expt_config: (dict) Experiment configuration, *default*: None
+        """
+        if trial_config is not None or expt_config is not None:
+            self.reset(trial_config, expt_config)
+
+        if self._trial_config is None:
+            raise ValueError("Must provide trial configuration")
+        if self._expt_config["experiment"] is None:
+            raise ValueError("Must provide experiment function")
+
+        self._log.warn("Run experiment")
+
+        # To run through generator multiple times, do nested loop
+
+        if self._expt_config["n_threads"] == 1:
+            self._run_single()
         else:
-            self.__fp = None
+            self._run_multi()
+
+    def __n_iterable(self, seq, n):
+        """
+        Return n copies of seq
+        """
+        return itertools.repeat(None, n)
+
+
+
+#         f = open(parent + "/config/alg/" + alg_file +  ".json")
+#         self._alg_config = json.load(f)
+#         f.close()
+#         self._alg_default = self._alg_config.pop('default', None)
+#         if "log_level" not in self._alg_default:
+#             self._alg_default["log_level"] = log_level
+#         self._log.warn("Accessed algorithm configuration")
         
-        self.__lock = lock = Lock() 
+#         f = open(parent + "/config/env/" + env_file +  ".json")
+#         self._env_config = json.load(f)  
+#         f.close()
+#         self._env_default = self._env_config.pop('default', None)
+#         if "log_level" not in self._env_default:
+#             self._env_default["log_level"] = log_level
+#         self._log.warn("Accessed Environment configuration") 
+        
+#         self._n_trials = n_trials
+#         self._n_threads = n_threads  
+        
+#         if file_name is not None:
+#             self.__fp = os.path.dirname(__file__) + "/data/" + file_name + ".pkl"
+#             self._log.warn("Save path set to " + self.__fp)
+#             if clear_save:
+#                 with open(self.__fp, 'wb') as f:
+#                     pickle.dump([],f)
+#         else:
+#             self.__fp = None
+        
+#         self.__lock = lock = Lock() 
             
-    def list_trials(self):
-        """
-        Generates a set of trials from the environment and algorithm params provided
+#     def list_trials(self):
+#         """
+#         Generates a set of trials from the environment and algorithm params provided
 
-        :return: (list(dict)) contains list of the parameters for each algorithm
-        """
+#         :return: (list(dict)) contains list of the parameters for each algorithm
+#         """
         
     
-    def generator_trials(self):
-        """
-        Generator implementation for yielding a set of trials from the environment and algorithm params provided
+#     def generator_trials(self):
+#         """
+#         Generator implementation for yielding a set of trials from the environment and algorithm params provided
 
-        :return: (list(dict)) contains list of the parameters for each algorithm
-        """
+#         :return: (list(dict)) contains list of the parameters for each algorithm
+#         """
     
-    def _start_pool(self, expts):
-        """
-        Starts Multithreading pool and performs series of experiments
+#     def _start_pool(self, expts):
+#         """
+#         Starts Multithreading pool and performs series of experiments
 
-        :param expts: (list([dict,dict])) List of experiments with parameters for (algorithm, environment)
-        """
-        self._log.warn("Starting pool")
-        if self.__fp is not None:
-            if os.path.exists(self.__fp):
-                with open(self.__fp, "rb") as f:
-                    data = pickle.load(f)
-                    self._log.warn("Accessed database")
-            else:   
-                with open(self.__fp, 'wb') as f:
-                    pickle.dump([],f)
-                self._log.warn("Starting blank database")
+#         :param expts: (list([dict,dict])) List of experiments with parameters for (algorithm, environment)
+#         """
+#         self._log.warn("Starting pool")
+#         if self.__fp is not None:
+#             if os.path.exists(self.__fp):
+#                 with open(self.__fp, "rb") as f:
+#                     data = pickle.load(f)
+#                     self._log.warn("Accessed database")
+#             else:   
+#                 with open(self.__fp, 'wb') as f:
+#                     pickle.dump([],f)
+#                 self._log.warn("Starting blank database")
 
-        if self._n_threads > 1:
-            self._log.warn("Starting multithread pool")        
-            p = Pool(self._n_threads)
-            p.map(self._simulate, expts)
-        else:
-            self._log.warn("Starting single thread pool")        
-            for t in expts:
-                self._simluate(t)
+#         if self._n_threads > 1:
+#             self._log.warn("Starting multithread pool")        
+#             p = Pool(self._n_threads)
+#             p.map(self._simulate, expts)
+#         else:
+#             self._log.warn("Starting single thread pool")        
+#             for t in expts:
+#                 self._simluate(t)
         
-        self._log.warn("Pool closed, simulations complete")        
+#         self._log.warn("Pool closed, simulations complete")        
 
-    def _simulate_save(self, params : dict):
-        """
-        Simulates and saves a single experimental trial
+#     def _simulate_save(self, params : dict):
+#         """
+#         Simulates and saves a single experimental trial
         
-        :param params: (dict) Contains "alg" and "env" with corresponding params
-        """
-        self._log.debug("Simulation")
-        env = gym.make(params["env"]["env"],max_episode_steps = params["env"]["max_time"], params=params["env"]["params"])
-        s = env.reset()
-        params["env"]["state"] = deepcopy(s)
-        planner = get_agent(params["alg"]["params"],params["env"])
+#         :param params: (dict) Contains "alg" and "env" with corresponding params
+#         """
+#         self._log.debug("Simulation")
+#         env = gym.make(params["env"]["env"],max_episode_steps = params["env"]["max_time"], params=params["env"]["params"])
+#         s = env.reset()
+#         params["env"]["state"] = deepcopy(s)
+#         planner = get_agent(params["alg"]["params"],params["env"])
 
-        done = False
-        ts = 0
-        accum_reward = 0
+#         done = False
+#         ts = 0
+#         accum_reward = 0
 
-        while(not done):
-            a = planner.evaluate(s, params["alg"]["search"])
-            s, r,done, is_trunc, info = env.step(a)
-            done = done or is_trunc
-            ts += 1
-            accum_reward += r
+#         while(not done):
+#             a = planner.evaluate(s, params["alg"]["search"])
+#             s, r,done, is_trunc, info = env.step(a)
+#             done = done or is_trunc
+#             ts += 1
+#             accum_reward += r
 
-        self._log.debug("Simulation complete")
-        if self.__fp is not None:
-            with open(self.__fp, "rb") as f:
-                data = pickle.load(f)
-                self._log.warn("Accessed database")
-            data.append(params)
-            with open(self.__fp, "wb") as f:
-                pickle.dump(data,f)
-                self._log.warn("Saved to database")
+#         self._log.debug("Simulation complete")
+#         if self.__fp is not None:
+#             with open(self.__fp, "rb") as f:
+#                 data = pickle.load(f)
+#                 self._log.warn("Accessed database")
+#             data.append(params)
+#             with open(self.__fp, "wb") as f:
+#                 pickle.dump(data,f)
+#                 self._log.warn("Saved to database")
 
-    def _simulate(self, params : dict) -> dict:
-        """
-        Simulates and saves a single experimental trial
+#     def _simulate(self, params : dict) -> dict:
+#         """
+#         Simulates and saves a single experimental trial
         
-        :param params: (dict) Contains "alg" and "env" with corresponding params
-        """
-        self._log.debug("Simulation")
-        env = gym.make(params["env"]["env"],max_episode_steps = params["env"]["max_time"], params=params["env"]["params"])
-        s = env.reset()
-        params["env"]["state"] = deepcopy(s)
-        planner = get_agent(params["alg"]["params"],params["env"])
+#         :param params: (dict) Contains "alg" and "env" with corresponding params
+#         """
+#         self._log.debug("Simulation")
+#         env = gym.make(params["env"]["env"],max_episode_steps = params["env"]["max_time"], params=params["env"]["params"])
+#         s = env.reset()
+#         params["env"]["state"] = deepcopy(s)
+#         planner = get_agent(params["alg"]["params"],params["env"])
 
-        done = False
-        ts = 0
-        accum_reward = 0
+#         done = False
+#         ts = 0
+#         accum_reward = 0
 
-        while(not done):
-            a = planner.evaluate(s, params["alg"]["search"])
-            s, r,done, is_trunc, info = env.step(a)
-            done = done or is_trunc
-            ts += 1
-            accum_reward += r
+#         while(not done):
+#             a = planner.evaluate(s, params["alg"]["search"])
+#             s, r,done, is_trunc, info = env.step(a)
+#             done = done or is_trunc
+#             ts += 1
+#             accum_reward += r
 
-        self._log.debug("Simulation complete")
-        return params
+#         self._log.debug("Simulation complete")
+#         return params
     
-    def _simulate(self, params : dict):
-        """
-        Simulates and saves a single experimental trial
+#     def _simulate(self, params : dict):
+#         """
+#         Simulates and saves a single experimental trial
         
-        :param params: (dict) Contains "alg" and "env" with corresponding params
-        """
-        self._log.debug("Simulation")
-        env = gym.make(params["env"]["env"],max_episode_steps = params["env"]["max_time"], params=params["env"]["params"])
-        s = env.reset()
-        params["env"]["state"] = deepcopy(s)
-        planner = get_agent(params["alg"]["params"],params["env"])
+#         :param params: (dict) Contains "alg" and "env" with corresponding params
+#         """
+#         self._log.debug("Simulation")
+#         env = gym.make(params["env"]["env"],max_episode_steps = params["env"]["max_time"], params=params["env"]["params"])
+#         s = env.reset()
+#         params["env"]["state"] = deepcopy(s)
+#         planner = get_agent(params["alg"]["params"],params["env"])
     
-        done = False
-        ts = 0
-        accum_reward = 0
+#         done = False
+#         ts = 0
+#         accum_reward = 0
 
-        while(not done):
-            a = planner.evaluate(s, params["alg"]["search"])
-            s, r,done, is_trunc, info = env.step(a)
-            done = done or is_trunc
-            ts += 1
-            accum_reward += r
-            if params["env"]["params"]["render"] != "none":
-                env.render()
+#         while(not done):
+#             a = planner.evaluate(s, params["alg"]["search"])
+#             s, r,done, is_trunc, info = env.step(a)
+#             done = done or is_trunc
+#             ts += 1
+#             accum_reward += r
+#             if params["env"]["params"]["render"] != "none":
+#                 env.render()
         
-        if ts < params["env"]["max_time"]:
-            accum_reward += (params["env"]["max_time"]-ts)*r
+#         if ts < params["env"]["max_time"]:
+#             accum_reward += (params["env"]["max_time"]-ts)*r
         
-        if self.__fp is not None:
-            data_point = nd.unstructure(params)
-            data_point["time"] = ts
-            data_point["r"] = accum_reward
-            if "pose" in data_point and "goal" in data_point:
-                data_point["distance"] = np.linalg.norm(np.asarray(data_point["pose"])-np.asarray(data_point["goal"]))
-            data_point["final"] = deepcopy(s)
-            if "pose" in s and "goal" in data_point:
-                data_point["final_distance"] = np.linalg.norm(np.asarray(s["pose"])-np.asarray(data_point["goal"]))
+#         if self.__fp is not None:
+#             data_point = nd.unstructure(params)
+#             data_point["time"] = ts
+#             data_point["r"] = accum_reward
+#             if "pose" in data_point and "goal" in data_point:
+#                 data_point["distance"] = np.linalg.norm(np.asarray(data_point["pose"])-np.asarray(data_point["goal"]))
+#             data_point["final"] = deepcopy(s)
+#             if "pose" in s and "goal" in data_point:
+#                 data_point["final_distance"] = np.linalg.norm(np.asarray(s["pose"])-np.asarray(data_point["goal"]))
     
-            self.__lock.acquire()
-            with open(self.__fp, "rb") as f:
-                data = pickle.load(f)
+#             self.__lock.acquire()
+#             with open(self.__fp, "rb") as f:
+#                 data = pickle.load(f)
             
-            data.append(data_point)
+#             data.append(data_point)
             
-            with open(params["fp"], 'wb') as f:
-                pickle.dump(data,f)      
+#             with open(params["fp"], 'wb') as f:
+#                 pickle.dump(data,f)      
             
-            self.__lock.release()
+#             self.__lock.release()
 
-    def run(self):
-        """
-        Runs Experiment. This is the primary UI.
-        """
-        self._log.warn("Running experiments")
-        expts = self._list_trials()
-        self._start_pool(expts)
+#     def run(self):
+#         """
+#         Runs Experiment. This is the primary UI.
+#         """
+#         self._log.warn("Running experiments")
+#         expts = self._list_trials()
+#         self._start_pool(expts)
         
         
-# "core default" is where things are initialized this includes file os.pathsep
-# "config" in core contains the operating file path and settings for expt backend
-# "default contains some default parameters for experimental config" Users are meant to replace this guy
-"""
-Main does the following
-    - Loads the core config which has default file paths from install (to change this use reconfigurator or manually edit)
-    - Loads config file for experiment as required parameter
-    - if "-r" used, default config will be reset to initial config
-"""
-if __name__=='__main__':
+# # "core default" is where things are initialized this includes file os.pathsep
+# # "config" in core contains the operating file path and settings for expt backend
+# # "default contains some default parameters for experimental config" Users are meant to replace this guy
+# """
+# Main does the following
+#     - Loads the core config which has default file paths from install (to change this use reconfigurator or manually edit)
+#     - Loads config file for experiment as required parameter
+#     - if "-r" used, default config will be reset to initial config
+# """
+# if __name__=='__main__':
     
-    if len(sys.argv) == 2 and sys.argv[1] == "-r":
-        rc.replace_file("/config/core/config.json", "/config/core/core_default.json")
-        exit("Reset core")
-    if len(sys.argv) == 2 and sys.argv[1] == "-h":
-        with open("/core/core.json", "r+") as f:
-            core_config = json.load(f)
-            core_config["path"] = os.getcwd()
-            exit("Current File Path updated to this directory")
+#     if len(sys.argv) == 2 and sys.argv[1] == "-r":
+#         rc.replace_file("/config/core/config.json", "/config/core/core_default.json")
+#         exit("Reset core")
+#     if len(sys.argv) == 2 and sys.argv[1] == "-h":
+#         with open("/core/core.json", "r+") as f:
+#             core_config = json.load(f)
+#             core_config["path"] = os.getcwd()
+#             exit("Current File Path updated to this directory")
     
-    with open("/core/core.json", "rb") as f:
-        core_config = json.load(f)
+#     with open("/core/core.json", "rb") as f:
+#         core_config = json.load(f)
         
-    if len(sys.argv) >= 1:
-        i = 1;
-        while i < len(sys.argv):
-            if sys.argv[i] == "--trials":
+#     if len(sys.argv) >= 1:
+#         i = 1;
+#         while i < len(sys.argv):
+#             if sys.argv[i] == "--trials":
                 
-                i += 2
-            elif sys.argv[i] == "--threads":
+#                 i += 2
+#             elif sys.argv[i] == "--threads":
                 
-                i += 2
-            elif sys.argv[i] == "-c":
+#                 i += 2
+#             elif sys.argv[i] == "-c":
                 
-                i += 1
+#                 i += 1
                 
-            elif sys.argv[i] == "--core-config":
+#             elif sys.argv[i] == "--core-config":
                 
-                i += 2
+#                 i += 2
             
-            else:
-                with open(core_config["path"] + sys.argv[i], "rb") as f:
-                    expt_config = json.load(f)
-                i += 1
+#             else:
+#                 with open(core_config["path"] + sys.argv[i], "rb") as f:
+#                     expt_config = json.load(f)
+#                 i += 1
                 
     
         
-    expts = RunExperiment(alg_config_file, core_config_file, n_trials, n_threads, clear_save)
+#     expts = RunExperiment(alg_config_file, core_config_file, n_trials, n_threads, clear_save)
     
-    expts.run()
+#     expts.run()
 

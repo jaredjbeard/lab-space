@@ -20,6 +20,30 @@ import reconfigurator.reconfigurator as rc
 
 from experiment.experiment import Experiment
 
+import sys
+import importlib.util
+
+# def call_function(module_path, module_name, func_name, *args):
+#     spec = importlib.util.spec_from_file_location(module_name, module_path)
+#     module = importlib.util.module_from_spec(spec)
+#     sys.modules[module_name] = module
+#     spec.loader.exec_module(module)
+#     func = getattr(module, func_name)
+#     return func(*args)
+
+# module_path = 'path/to/my_functions.py'
+# module_name = 'my_functions'
+# functions = {
+#     'add': (module_path, module_name, 'add')
+# }
+
+# func_name = 'add'
+# module_path, module_name, func_name = functions[func_name]
+# result = call_function(module_path, module_name, func_name, 3, 4)
+# print(result)  # Output: 7
+
+## I should add a register function. 
+
 if __name__=='__main__':  
     
     parser = argparse.ArgumentParser(description='Lab Space CLI')
@@ -112,3 +136,13 @@ if __name__=='__main__':
     # core default holds default values for core files and expt/trial config files
     # Need to set expt type, so we need a method to register them. 
     # Need a function to make them callable.  -> Maybe we make the CLI inheritable then users can add their own commands
+
+    # :param trial_config: (list(dict)) Configurations for each trial 
+    # :param expt_config: (dict) Experiment configuration file containing the following keys:
+    #     - "experiment": (func) Reference to function under test
+    #     - "is_dense": (bool) If true, will use `Reconfigurator <https://reconfigurator.readthedocs.io/en/latest/introduction.html>`_ to compile into a list of configurations, *default*: False
+    #     - "n_trials": (int) Number of trials to run for each set of parameters, *default*: 1
+    #     - "n_threads": (int) Number of threads to use, *default*: 1
+    #     - "log_level": (str) Log level, *default*: WARNING
+    #     - "file_name": (str) file to save data, if none does not save, *default*: None
+    #     - "clear_save": (bool) clears data from pickle before running experiment, *default*: False

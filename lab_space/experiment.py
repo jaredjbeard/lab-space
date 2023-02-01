@@ -1,6 +1,6 @@
 #!/usr/bin/python
 """
-This script is intended to run single or multithreaded decision making experiments
+This script is intended to run single or multithreaded experiments.
 """
 __license__ = "BSD-3"
 __docformat__ = 'reStructuredText'
@@ -14,17 +14,11 @@ current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 
-from abc import ABC,abstractmethod
 from multiprocessing import Pool, Lock
 import logging
 import itertools
-import numpy as np
-from copy import deepcopy
 import pickle
-import json
 
-import nestifydict as nd
-import reconfigurator as rc
 
 class Experiment():
     """
@@ -54,6 +48,8 @@ class Experiment():
         
         self._log.warn("RunExperiment Init, perform " + str(expt_config["n_trials"]) + " trials across " + str(expt_config["n_threads"]) + "threads")
 
+        self.__lock = Lock()
+
         self.reset(trial_config, expt_config)
         
     def reset(self, trial_config = None, expt_config = None):
@@ -77,6 +73,9 @@ class Experiment():
             expt_config["file_name"] = None
         if "clear_save" not in expt_config:
             expt_config["clear_save"] = False
+        elif expt_config["clear_save"] and expt_config["file_name"] is not None:
+            with open(expt_config["file_name"], 'wb') as f:
+                    pickle.dump([],f)
         self._expt_config = expt_config
         self._log.warn("Reset experiment")
 
@@ -96,260 +95,55 @@ class Experiment():
             raise ValueError("Must provide experiment function")
 
         self._log.warn("Run experiment")
-
-        # To run through generator multiple times, do nested loop
+        self._results = []
 
         if self._expt_config["n_threads"] == 1:
-            self._run_single()
-        else:
-            self._run_multi()
+            return self._run_single()
+        return self._run_multi()
 
-    def __n_iterable(self, seq, n):
+    def _run_single(self):
         """
-        Return n copies of seq
+        Run experiment in single thread
         """
-        return itertools.repeat(None, n)
+        self._log.warn("Run experiment in single thread")
+        results = []
+        for trial in self.__n_iterable(self._trial_config, self._expt_config["n_trials"]):
+            if self._expt_config["file_name"] is not None:
+                results.append(self._run_save(trial))
+            results.append(self._expt_config["experiment"](trial))
+        return results
 
+    def _run_multi(self):
+        """
+        Run experiment in multiple threads
+        """
+        self._log.warn("Run experiment in multiple threads")
+        with Pool(self._expt_config["n_threads"]) as p:
+            if self._expt_config["file_name"] is not None:
+                return p.map(self._run_save, self._n_iterable(self._trial_config, self._expt_config["n_trials"]))
+            return p.map(self._expt_config["experiment"], self._n_iterable(self._trial_config, self._expt_config["n_trials"]))
 
+    def _run_save(self, trial_config):
+        """
+        Run experiment and save results
 
-#         f = open(parent + "/config/alg/" + alg_file +  ".json")
-#         self._alg_config = json.load(f)
-#         f.close()
-#         self._alg_default = self._alg_config.pop('default', None)
-#         if "log_level" not in self._alg_default:
-#             self._alg_default["log_level"] = log_level
-#         self._log.warn("Accessed algorithm configuration")
-        
-#         f = open(parent + "/config/env/" + env_file +  ".json")
-#         self._env_config = json.load(f)  
-#         f.close()
-#         self._env_default = self._env_config.pop('default', None)
-#         if "log_level" not in self._env_default:
-#             self._env_default["log_level"] = log_level
-#         self._log.warn("Accessed Environment configuration") 
-        
-#         self._n_trials = n_trials
-#         self._n_threads = n_threads  
-        
-#         if file_name is not None:
-#             self.__fp = os.path.dirname(__file__) + "/data/" + file_name + ".pkl"
-#             self._log.warn("Save path set to " + self.__fp)
-#             if clear_save:
-#                 with open(self.__fp, 'wb') as f:
-#                     pickle.dump([],f)
-#         else:
-#             self.__fp = None
-        
-#         self.__lock = lock = Lock() 
-            
-#     def list_trials(self):
-#         """
-#         Generates a set of trials from the environment and algorithm params provided
+        :param trial_config: (list(dict)) Configurations for each trial
+        """
+        result = self._expt_config["experiment"](trial_config)
+        with self.__lock:
+            with open(self._expt_config["file_name"], "r+") as f:
+                data = pickle.load(f)
+                data.append(result)
+                pickle.dump(data,f)  
+        return result
 
-#         :return: (list(dict)) contains list of the parameters for each algorithm
-#         """
-        
-    
-#     def generator_trials(self):
-#         """
-#         Generator implementation for yielding a set of trials from the environment and algorithm params provided
+    def __n_iterable(self, iterable_el, n = 1):
+        """
+        Return n copies of an iterable
 
-#         :return: (list(dict)) contains list of the parameters for each algorithm
-#         """
-    
-#     def _start_pool(self, expts):
-#         """
-#         Starts Multithreading pool and performs series of experiments
-
-#         :param expts: (list([dict,dict])) List of experiments with parameters for (algorithm, environment)
-#         """
-#         self._log.warn("Starting pool")
-#         if self.__fp is not None:
-#             if os.path.exists(self.__fp):
-#                 with open(self.__fp, "rb") as f:
-#                     data = pickle.load(f)
-#                     self._log.warn("Accessed database")
-#             else:   
-#                 with open(self.__fp, 'wb') as f:
-#                     pickle.dump([],f)
-#                 self._log.warn("Starting blank database")
-
-#         if self._n_threads > 1:
-#             self._log.warn("Starting multithread pool")        
-#             p = Pool(self._n_threads)
-#             p.map(self._simulate, expts)
-#         else:
-#             self._log.warn("Starting single thread pool")        
-#             for t in expts:
-#                 self._simluate(t)
-        
-#         self._log.warn("Pool closed, simulations complete")        
-
-#     def _simulate_save(self, params : dict):
-#         """
-#         Simulates and saves a single experimental trial
-        
-#         :param params: (dict) Contains "alg" and "env" with corresponding params
-#         """
-#         self._log.debug("Simulation")
-#         env = gym.make(params["env"]["env"],max_episode_steps = params["env"]["max_time"], params=params["env"]["params"])
-#         s = env.reset()
-#         params["env"]["state"] = deepcopy(s)
-#         planner = get_agent(params["alg"]["params"],params["env"])
-
-#         done = False
-#         ts = 0
-#         accum_reward = 0
-
-#         while(not done):
-#             a = planner.evaluate(s, params["alg"]["search"])
-#             s, r,done, is_trunc, info = env.step(a)
-#             done = done or is_trunc
-#             ts += 1
-#             accum_reward += r
-
-#         self._log.debug("Simulation complete")
-#         if self.__fp is not None:
-#             with open(self.__fp, "rb") as f:
-#                 data = pickle.load(f)
-#                 self._log.warn("Accessed database")
-#             data.append(params)
-#             with open(self.__fp, "wb") as f:
-#                 pickle.dump(data,f)
-#                 self._log.warn("Saved to database")
-
-#     def _simulate(self, params : dict) -> dict:
-#         """
-#         Simulates and saves a single experimental trial
-        
-#         :param params: (dict) Contains "alg" and "env" with corresponding params
-#         """
-#         self._log.debug("Simulation")
-#         env = gym.make(params["env"]["env"],max_episode_steps = params["env"]["max_time"], params=params["env"]["params"])
-#         s = env.reset()
-#         params["env"]["state"] = deepcopy(s)
-#         planner = get_agent(params["alg"]["params"],params["env"])
-
-#         done = False
-#         ts = 0
-#         accum_reward = 0
-
-#         while(not done):
-#             a = planner.evaluate(s, params["alg"]["search"])
-#             s, r,done, is_trunc, info = env.step(a)
-#             done = done or is_trunc
-#             ts += 1
-#             accum_reward += r
-
-#         self._log.debug("Simulation complete")
-#         return params
-    
-#     def _simulate(self, params : dict):
-#         """
-#         Simulates and saves a single experimental trial
-        
-#         :param params: (dict) Contains "alg" and "env" with corresponding params
-#         """
-#         self._log.debug("Simulation")
-#         env = gym.make(params["env"]["env"],max_episode_steps = params["env"]["max_time"], params=params["env"]["params"])
-#         s = env.reset()
-#         params["env"]["state"] = deepcopy(s)
-#         planner = get_agent(params["alg"]["params"],params["env"])
-    
-#         done = False
-#         ts = 0
-#         accum_reward = 0
-
-#         while(not done):
-#             a = planner.evaluate(s, params["alg"]["search"])
-#             s, r,done, is_trunc, info = env.step(a)
-#             done = done or is_trunc
-#             ts += 1
-#             accum_reward += r
-#             if params["env"]["params"]["render"] != "none":
-#                 env.render()
-        
-#         if ts < params["env"]["max_time"]:
-#             accum_reward += (params["env"]["max_time"]-ts)*r
-        
-#         if self.__fp is not None:
-#             data_point = nd.unstructure(params)
-#             data_point["time"] = ts
-#             data_point["r"] = accum_reward
-#             if "pose" in data_point and "goal" in data_point:
-#                 data_point["distance"] = np.linalg.norm(np.asarray(data_point["pose"])-np.asarray(data_point["goal"]))
-#             data_point["final"] = deepcopy(s)
-#             if "pose" in s and "goal" in data_point:
-#                 data_point["final_distance"] = np.linalg.norm(np.asarray(s["pose"])-np.asarray(data_point["goal"]))
-    
-#             self.__lock.acquire()
-#             with open(self.__fp, "rb") as f:
-#                 data = pickle.load(f)
-            
-#             data.append(data_point)
-            
-#             with open(params["fp"], 'wb') as f:
-#                 pickle.dump(data,f)      
-            
-#             self.__lock.release()
-
-#     def run(self):
-#         """
-#         Runs Experiment. This is the primary UI.
-#         """
-#         self._log.warn("Running experiments")
-#         expts = self._list_trials()
-#         self._start_pool(expts)
-        
-        
-# # "core default" is where things are initialized this includes file os.pathsep
-# # "config" in core contains the operating file path and settings for expt backend
-# # "default contains some default parameters for experimental config" Users are meant to replace this guy
-# """
-# Main does the following
-#     - Loads the core config which has default file paths from install (to change this use reconfigurator or manually edit)
-#     - Loads config file for experiment as required parameter
-#     - if "-r" used, default config will be reset to initial config
-# """
-# if __name__=='__main__':
-    
-#     if len(sys.argv) == 2 and sys.argv[1] == "-r":
-#         rc.replace_file("/config/core/config.json", "/config/core/core_default.json")
-#         exit("Reset core")
-#     if len(sys.argv) == 2 and sys.argv[1] == "-h":
-#         with open("/core/core.json", "r+") as f:
-#             core_config = json.load(f)
-#             core_config["path"] = os.getcwd()
-#             exit("Current File Path updated to this directory")
-    
-#     with open("/core/core.json", "rb") as f:
-#         core_config = json.load(f)
-        
-#     if len(sys.argv) >= 1:
-#         i = 1;
-#         while i < len(sys.argv):
-#             if sys.argv[i] == "--trials":
-                
-#                 i += 2
-#             elif sys.argv[i] == "--threads":
-                
-#                 i += 2
-#             elif sys.argv[i] == "-c":
-                
-#                 i += 1
-                
-#             elif sys.argv[i] == "--core-config":
-                
-#                 i += 2
-            
-#             else:
-#                 with open(core_config["path"] + sys.argv[i], "rb") as f:
-#                     expt_config = json.load(f)
-#                 i += 1
-                
-    
-        
-#     expts = RunExperiment(alg_config_file, core_config_file, n_trials, n_threads, clear_save)
-    
-#     expts.run()
-
+        :param iterable_el: (iterable) Iterable to copy
+        :param n: (int) Number of copies
+        """
+        for element in itertools.repeat(iterable_el, n):
+            for el in element:
+                yield el

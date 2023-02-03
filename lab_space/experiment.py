@@ -17,6 +17,7 @@ sys.path.append(parent)
 from multiprocessing import Pool, Lock
 import logging
 import itertools
+import pandas as pd
 import pickle
 
 
@@ -52,7 +53,7 @@ class Experiment():
 
         self.reset(trial_config, expt_config)
         
-    def reset(self, trial_config = None, expt_config = None):
+    def reset(self, trial_config = None, expt_config : dict = None):
         """
         Reset experiment with new configurations
 
@@ -75,16 +76,17 @@ class Experiment():
             expt_config["clear_save"] = False
         elif expt_config["clear_save"] and expt_config["save_file"] is not None:
             with open(expt_config["save_file"], 'wb') as f:
-                    pickle.dump([],f)
+                    export_file(pd.DataFrame(), f)
         self._expt_config = expt_config
         self._log.warn("Reset experiment")
 
-    def run(self, trial_config = None, expt_config = None):
+    def run(self, trial_config = None, expt_config : dict = None):
         """
         Run experiment with new configurations
 
         :param trial_config: (list(dict)) Configurations for each trial, *default*: None
         :param expt_config: (dict) Experiment configuration, *default*: None
+        :return: (pandas.DataFrame) data
         """
         if trial_config is not None or expt_config is not None:
             self.reset(trial_config, expt_config)
@@ -104,6 +106,8 @@ class Experiment():
     def _run_single(self):
         """
         Run experiment in single thread
+
+        :return: (pandas.DataFrame) data
         """
         self._log.warn("Run experiment in single thread")
         results = []
@@ -116,6 +120,8 @@ class Experiment():
     def _run_multi(self):
         """
         Run experiment in multiple processes
+
+        :return: (pandas.DataFrame) data
         """
         self._log.warn("Run experiment in multiple processes")
         with Pool(self._expt_config["n_processes"]) as p:
@@ -128,13 +134,13 @@ class Experiment():
         Run experiment and save results
 
         :param trial_config: (list(dict)) Configurations for each trial
+        :return: (pandas.DataFrame) data
         """
         result = self._expt_config["experiment"](trial_config)
         with self.__lock:
-            with open(self._expt_config["save_file"], "r+") as f:
-                data = pickle.load(f)
-                data.append(result)
-                pickle.dump(data,f)  
+            data = import_file(self._expt_config["save_file"])
+            pd.concat([data, result])
+            export_file(data,self._expt_config["save_file"])
         return result
 
     def __n_iterable(self, iterable_el, n = 1):
@@ -143,7 +149,43 @@ class Experiment():
 
         :param iterable_el: (iterable) Iterable to copy
         :param n: (int) Number of copies
+        :return: () n copies of the input sequences
         """
         for element in itertools.repeat(iterable_el, n):
             for el in element:
                 yield el
+
+def import_file(filepath):
+    """
+    Import a file as a Pandas dataframe based on its file extension
+
+    :param filepath: (str) file path
+    :return: (pandas.DataFrame) the imported dataframe
+    """
+    extension = filepath.split(".")[-1]
+    if extension == "csv":
+        return pd.read_csv(filepath)
+    elif extension == "xlsx":
+        return pd.read_excel(filepath)
+    elif extension == "json":
+        return pd.read_json(filepath)
+    else:
+        raise ValueError(f"Unsupported file type: {extension}")
+
+def export_file(df, filepath):
+    """
+    Write a Pandas dataframe to a file based on its file extension
+
+    :param df: (pandas.DataFrame) the dataframe to be written
+    :param filepath: (str) file path
+    :return: None
+    """
+    extension = filepath.split(".")[-1]
+    if extension == "csv":
+        df.to_csv(filepath, index=False)
+    elif extension == "xlsx":
+        df.to_excel(filepath, index=False)
+    elif extension == "json":
+        df.to_json(filepath, index=False)
+    else:
+        raise ValueError(f"Unsupported file type: {extension}")

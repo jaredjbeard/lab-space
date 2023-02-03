@@ -24,54 +24,32 @@ from experiment.experiment import Experiment
 import sys
 import importlib.util
 
-##########
-"""
-Add default saving location to config file in add cli.
-"""
-##########
+CORE_FILE_NAME = "config/core/core.json"
+CORE_DEFAULT_FILE_NAME = "config/core/core_default.json"
 
-# add core defaults to config file in add cli. 
-### Need to also test whether the function is callable.
-# def call_function(module_path, module_name, func_name, *args):
-#     spec = importlib.util.spec_from_file_location(module_name, module_path)
-#     module = importlib.util.module_from_spec(spec)
-#     sys.modules[module_name] = module
-#     spec.loader.exec_module(module)
-#     func = getattr(module, func_name)
-#     return func(*args)
-
-# module_path = 'path/to/my_functions.py'
-# module_name = 'my_functions'
-# functions = {
-#     'add': (module_path, module_name, 'add')
-# }
-
-# func_name = 'add'
-# module_path, module_name, func_name = functions[func_name]
-# result = call_function(module_path, module_name, func_name, 3, 4)
-# print(result)  # Output: 7
-
-## I should add a register function. 
-
-
-def register_experiment(experiment_path, experiment_file):
+def register_experiment(module_path, module_name, func_key_name, func_name):
     """
     Registers experiment to be run
 
-    :param experiment_path: (str) Path to experiment file
-    :param experiment_file: (str) Name of experiment file
+    :param module_path: (str) Path to module
+    :param module_name: (str) Name of experiment file
+    :param func_key_name: (str) Key to identify function
+    :param func_name: (str) Function to call register
     """
-    if experiment_path is None:
-        experiment_path = os.path.dirname(os.path.realpath(__file__))
-    if experiment_file is None:
-        experiment_file = "experiment.py"
 
-    sys.path.append(experiment_path)
-    spec = importlib.util.spec_from_file_location("experiment", os.path.join(experiment_path, experiment_file))
-    experiment = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(experiment)
+    try: 
+        f = call_function(module_path, module_name, func_name)
+    except:
+        raise ValueError("Function not Found")
 
-    return experiment
+    with open(current + CORE_FILE_NAME, 'r+') as f:
+        core_config = json.load(f)
+        temp_dict = {
+                "module_path": module_path,
+                "module_name": module_name,
+                "function_name": func_name
+        }
+        core_config["expeiments"].update({func_key_name:temp_dict})
 
 def get_registered_experiment(experiment):
     """
@@ -79,7 +57,21 @@ def get_registered_experiment(experiment):
 
     :param experiment: (module) Experiment module
     """
-    return {k:v for k,v in experiment.__dict__.items() if callable(v) and k[0] != '_'}
+    with open(current + CORE_FILE_NAME, 'rb') as f:
+        core_config = json.load(f)
+        if "experiments" in core_config:
+            expt_config = core_config["experiments"][experiment]
+        else: 
+            raise ValueError("No Registered Experiments")
+    return call_function(expt_config["module_path"], expt_config["module_name"], expt_config["function_name"])
+
+def call_function(module_path, module_name, func_name):
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    func = getattr(module, func_name)
+    return func
 
 
 if __name__=='__main__':
@@ -87,35 +79,35 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Lab Space CLI')
     parser.add_argument('-r',   '--run',                                  nargs = 0,  help='Runs algorithm, if unspecified runs user default')
     
-    parser.add_argument('-up',  '--Update_path',                type=str, nargs ="+", help='Updates path of both config files, if unspecified resets to factory default')
-    parser.add_argument('-utp', '--Update_trial_path',          type=str, nargs ="+", help='Updates path of trial config files, if unspecified resets to factory default')
-    parser.add_argument('-ut',  '--Update_trial',               type=str, nargs ="+", help='Updates file name for trial config, if unspecified resets to factory default')
-    parser.add_argument('-uep', '--Update_experiment_path',     type=str, nargs ="+", help='Updates path of experiment config files, if unspecified resets to factory default')
-    parser.add_argument('-ue',  '--Update_experiment',          type=str, nargs ="+", help='Updates file name for experiment config, if unspecified resets to factory default')
+    parser.add_argument('-up',  '--update_path',                type=str, nargs ="+", help='Updates path of both config files, if unspecified resets to factory default')
+    parser.add_argument('-utp', '--update_trial_path',          type=str, nargs ="+", help='Updates path of trial config files, if unspecified resets to factory default')
+    parser.add_argument('-ut',  '--update_trial',               type=str, nargs ="+", help='Updates file name for trial config, if unspecified resets to factory default')
+    parser.add_argument('-uep', '--update_experiment_path',     type=str, nargs ="+", help='Updates path of experiment config files, if unspecified resets to factory default')
+    parser.add_argument('-ue',  '--update_experiment',          type=str, nargs ="+", help='Updates file name for experiment config, if unspecified resets to factory default')
     
     parser.add_argument('-nt',  '--num_trials',                 type=int, nargs = 1,  help='Number of trials to run')
     parser.add_argument('-np',  '--num_processes',              type=int, nargs = 1,  help='Number of processes to run')
     parser.add_argument('-cs',  '--clear-save',                 type=bool,nargs ="+", help='Clears save file, default is true')
     parser.add_argument('-l',   '--loglevel',                   type=str, nargs = 1,  help='Sets log level')
-    parser.add_argument('-c',  '--compile',                               nargs = 0,  help='Compiles trial config file')
+    parser.add_argument('-c',   '--compile',                              nargs = 0,  help='Compiles trial config file')
 
     parser.add_argument('-f',    '--function',                  type=str, nargs = 1,  help='Function to run')
-    parser.add_argument('-fr',   '--function_register',         type=str, nargs = 4,  help='Function to register, takes 4 arguments: id_name, function_name, path, and module')
+    parser.add_argument('-fr',   '--function_register',         type=str, nargs ="+",  help='Function to register, takes 4 arguments: path, module, name, and function. If only 3 specified, current working directory will be used as path.')
     
     parser.add_argument('-s',    '--save',                                nargs = 0,  help='Saves settings for experiment and trial data to current files')
     parser.add_argument('-sc',   '--save_core',                           nargs ="+", help='Saves settings for core')
     parser.add_argument('-st',   '--save_trial',                type=str, nargs ="+", help='Saves settings for trial data, if argument specified saves to that file in path')
     parser.add_argument('-se',   '--save_path',                 type=str, nargs ="+", help='Saves settings for experiment data, if argument specified saves to that file in path')
     
-    parser.add_argument('-p',  '--print',                       type=str, nargs = 0,  help='Prints config file')
+    parser.add_argument('-p',    '--print',                     type=str, nargs = 0,  help='Prints config file')
 
     args = parser.parse_args()
 
     #########################################################################################
     # Configurations ------------------------------------------------------------------------
-    with open(current + "config/core/core.json", "r") as f:
+    with open(current + CORE_FILE_NAME, "rb") as f:
         core_config = json.load(f)
-    with open(current + "config/core/core_default.json", "r") as f:
+    with open(current + CORE_DEFAULT_FILE_NAME, "rb") as f:
         core_default = json.load(f)
 
     if hasattr(args, "update_path"):
@@ -158,8 +150,6 @@ if __name__=='__main__':
             expt_config["save"] = args.clear_save[0]
     if hasattr(args, "loglevel"):
         expt_config["loglevel"] = args.loglevel[0]
-    if hasattr(args, "function"):
-        expt_config["function"] = args.function[0]
     if hasattr(args, "compile"):
         if hasattr(args, "save") or hasattr(args, "save_trial"):
             trial_config = compile_to_list(trial_config)
@@ -168,15 +158,22 @@ if __name__=='__main__':
         
 
     # Function Registration -----------------------------------------------------------------
+    if hasattr(args, "function"):
+        expt_config["function"] = get_registered_experiment(args.function[0])
+
     if hasattr(args, "function_register"):
-        register_experiment(args.function_register[0], args.function_register[1], args.function_register[2], args.function_register[3])
+        if len(args.function) == 4:
+            register_experiment(args.function_register[0], args.function_register[1], args.function_register[2], args.function_register[3])
+        else:
+            register_experiment(os.getcwd(), args.function_register[1], args.function_register[2], args.function_register[3])
+        # register experiment
 
     # Save --------------------------------------------------------------------------------------------
     if hasattr(args, "save"):
         rc.write_file(trial_config, core_config["trial_path"] + core_config["trial_name"])
         rc.write_file(expt_config, core_config["expt_path"] + core_config["expt_name"])
     if hasattr(args, "save_core"):
-        rc.write_file(core_config, current + "config/core/core.json")
+        rc.write_file(core_config, current + CORE_FILE_NAME)
     if hasattr(args, "save_trial"):
         if args.save_trial is None:
             rc.write_file(trial_config, core_config["trial_path"] + core_config["trial_name"])

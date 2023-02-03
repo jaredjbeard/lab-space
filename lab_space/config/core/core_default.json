@@ -3,13 +3,5 @@
     "trial_name": "",
     "expt_path": "",
     "expt_name": "",
-    "functions": 
-        {
-        "f":
-            {
-                "module_path": "functions",
-                "module_name": "functions",
-                "function_name": "f"
-            }
-        }
+    "functions": { }
 }

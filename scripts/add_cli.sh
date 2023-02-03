@@ -12,4 +12,6 @@ export_path=${export_path/parent/$parent}
 echo $export_path >> ~/.bashrc
 source ~/.bashrc
 
+python setup_core.py
+
 echo "Lab Space CLI added!"

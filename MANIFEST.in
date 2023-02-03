@@ -1,0 +1,3 @@
+include lab_space/config/*json
+include lab_space/config/core/*.json
+include lab_space/scripts/*.bash

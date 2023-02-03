@@ -18,6 +18,12 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[tools.setuptools]
+include_package_data = true
+
+[tools.setuptools.packages.find]
+where = ["lab_space"]
+
 [project.urls]
 "Homepage" = "https://github.com/jaredjbeard/reconfigurator"
 "Documentation" = "https://reconfigurator.readthedocs.io/en/latest/introduction.html"

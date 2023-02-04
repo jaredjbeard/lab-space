@@ -12,14 +12,6 @@ Subpackages
 Submodules
 ----------
 
-Analysis
---------
-
-.. automodule:: lab_space.analysis
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Experiments
 -----------
 

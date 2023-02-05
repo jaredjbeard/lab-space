@@ -17,14 +17,18 @@ sys.path.append(parent)
 import json 
 
 if __name__ == "__main__":
-    CORE_FILE_NAME = "config/core/core.json"
-    CORE_DEFAULT_FILE_NAME = "config/core/core_default.json"
+    CORE_FILE_NAME = "/config/core/core.json"
+    CORE_DEFAULT_FILE_NAME = "/config/core/core_default.json"
 
-    with open(parent + "/../" + CORE_DEFAULT_FILE_NAME, 'r+') as f:
+    with open(parent + CORE_DEFAULT_FILE_NAME, 'rb') as f:
         config = json.load(f)
-        config["trial_path"] = parent + "/../config/"
-        config["expt_path"] = parent + "/../config/"
-        json.dump(config, f)
 
-    with open(parent + "/../" + CORE_FILE_NAME, 'wb') as f:
-        json.dump(config, f)
+    config["trial_path"] = parent + "/config/"
+    config["expt_path"] = parent + "/config/"
+
+    with open(parent + CORE_DEFAULT_FILE_NAME, 'w') as f:
+        json.dump(config, f, indent=4)
+
+    with open(parent + CORE_FILE_NAME, 'w') as f:
+        json.dump(config, f, indent=4)
+        

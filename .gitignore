@@ -1,0 +1,9 @@
+bin/*
+build/
+.vscode/*
+__pycache__/
+lab_space.egg-info/
+lab_space_jaredjbeard.egg-info/
+dist/
+*.html
+.pypirc

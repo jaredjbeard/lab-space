@@ -17,15 +17,15 @@ sys.path.append(parent)
 import argparse
 import json
 import reconfigurator.reconfigurator as rc
-from reconfigurator.compile import compile_as_generator, compile_to_list
+from reconfigurator.compiler import compile_as_generator, compile_to_list
 
-from experiment.experiment import Experiment
+from lab_space.experiment import Experiment
 
 import sys
 import importlib.util
 
-CORE_FILE_NAME = "config/core/core.json"
-CORE_DEFAULT_FILE_NAME = "config/core/core_default.json"
+CORE_FILE_NAME = "/config/core/core.json"
+CORE_DEFAULT_FILE_NAME = "/config/core/core_default.json"
 
 def register_experiment(module_path, module_name, func_key_name, func_name):
     """
@@ -77,7 +77,7 @@ def call_function(module_path, module_name, func_name):
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Lab Space CLI')
-    parser.add_argument('-r',   '--run',                                  nargs = 0,  help='Runs algorithm, if unspecified runs user default')
+    parser.add_argument('-r',   '--run',           action="store_const", const=True,  help='Runs algorithm, if unspecified runs user default')
     
     parser.add_argument('-up',  '--update_path',                type=str, nargs ="+", help='Updates path of both config files, if unspecified resets to factory default')
     parser.add_argument('-utp', '--update_trial_path',          type=str, nargs ="+", help='Updates path of trial config files, if unspecified resets to factory default')
@@ -89,20 +89,20 @@ if __name__=='__main__':
     parser.add_argument('-np',  '--num_processes',              type=int, nargs = 1,  help='Number of processes to run')
     parser.add_argument('-cs',  '--clear-save',                 type=bool,nargs ="+", help='Clears save file, default is true')
     parser.add_argument('-l',   '--loglevel',                   type=str, nargs = 1,  help='Sets log level')
-    parser.add_argument('-c',   '--compile',                              nargs = 0,  help='Compiles trial config file')
+    parser.add_argument('-c',   '--compile',       action="store_const", const=True,  help='Compiles trial config file')
 
     parser.add_argument('-f',    '--function',                  type=str, nargs = 1,  help='Function to run')
     parser.add_argument('-fr',   '--function_register',         type=str, nargs ="+",  help='Function to register, takes 4 arguments: path, module, name, and function. If only 3 specified, current working directory will be used as path.')
     
-    parser.add_argument('-s',    '--save',                                nargs = 0,  help='Saves settings for experiment and trial data to current files')
+    parser.add_argument('-s',    '--save',         action="store_const", const=True,  help='Saves settings for experiment and trial data to current files')
     parser.add_argument('-sc',   '--save_core',                           nargs ="+", help='Saves settings for core')
     parser.add_argument('-st',   '--save_trial',                type=str, nargs ="+", help='Saves settings for trial data, if argument specified saves to that file in path')
     parser.add_argument('-se',   '--save_path',                 type=str, nargs ="+", help='Saves settings for experiment data, if argument specified saves to that file in path')
     
-    parser.add_argument('-p',    '--print',                     type=str, nargs = 0,  help='Prints config file')
+    parser.add_argument('-p',    '--print',        action="store_const", const=True,  help='Prints config file')
 
     args = parser.parse_args()
-
+    print(args)
     #########################################################################################
     # Configurations ------------------------------------------------------------------------
     with open(current + CORE_FILE_NAME, "rb") as f:
@@ -110,7 +110,7 @@ if __name__=='__main__':
     with open(current + CORE_DEFAULT_FILE_NAME, "rb") as f:
         core_default = json.load(f)
 
-    if hasattr(args, "update_path"):
+    if hasattr(args, "update_path") and args.update_path is not None:
         if args.update_path is None:
             core_config["trial_path"] = core_default["trial_path"]
             core_config["expt_path"] = core_default["expt_path"]
@@ -121,47 +121,51 @@ if __name__=='__main__':
     if hasattr(args, "update_trial_path"):
         if args.update_trial_path is None:
             core_config["trial_path"] = core_default["trial_path"]
-        core_config["trial_path"] = args.trial_path[0]
+        else:
+            core_config["trial_path"] = args.trial_path[0]
 
     if hasattr(args, "update_trial"):
         if args.update_trial is None:
             core_config["trial_name"] = core_default["trial_name"]
-        core_config["trial_name"] = args.trial[0]
+        else:
+            core_config["trial_name"] = args.trial[0]
     trial_config = rc.read_file(core_config["trial_path"] + core_config["trial_name"])
     
     if hasattr(args, "update_experiment_path"):
         if args.update_experiment_path is None:
             core_config["expt_path"] = core_default["expt_path"]
-        core_config["expt_path"] = args.experiment_path[0]
+        else:
+            core_config["expt_path"] = args.experiment_path[0]
     if hasattr(args, "update_experiment"):
         if args.update_experiment is None:
             core_config["expt_name"] = core_default["expt_name"]
-        core_config["expt_name"] = args.experiment[0]
+        else:
+            core_config["expt_name"] = args.experiment[0]
     expt_config = rc.read_file(core_config["expt_path"] + core_config["expt_name"])
 
-    if hasattr(args, "num_trials"):
+    if hasattr(args, "num_trials") and args.num_trials is not None:
         expt_config["num_trials"] = args.num_trials[0]
-    if hasattr(args, "num_processes"):
+    if hasattr(args, "num_processes") and args.num_processes is not None:
         expt_config["num_processes"] = args.num_processes[0]
-    if hasattr(args, "clear_save"):
-        if args.clear_save is None:
-            expt_config["save"] = True
+    if hasattr(args, "clear_save") and args.clear_save is not None:
+        if len(args.clear_save):
+            expt_config["clear_save"] = True
         else:
-            expt_config["save"] = args.clear_save[0]
-    if hasattr(args, "loglevel"):
+            expt_config["clear_save"] = args.clear_save[0]
+    if hasattr(args, "loglevel") and args.loglevel is not None:
         expt_config["loglevel"] = args.loglevel[0]
-    if hasattr(args, "compile"):
-        if hasattr(args, "save") or hasattr(args, "save_trial"):
+    if hasattr(args, "compile") and args.compile is not None:
+        if (hasattr(args, "save") and args.save is not None) or (hasattr(args, "save_trial") and args.save_trial is not None):
             trial_config = compile_to_list(trial_config)
         else:
             trial_config = compile_as_generator(trial_config)
         
 
     # Function Registration -----------------------------------------------------------------
-    if hasattr(args, "function"):
+    if hasattr(args, "function") and args.function is not None:
         expt_config["function"] = get_registered_experiment(args.function[0])
 
-    if hasattr(args, "function_register"):
+    if hasattr(args, "function_register") and args.function_register is not None:
         if len(args.function) == 4:
             register_experiment(args.function_register[0], args.function_register[1], args.function_register[2], args.function_register[3])
         else:
@@ -169,31 +173,33 @@ if __name__=='__main__':
         # register experiment
 
     # Save --------------------------------------------------------------------------------------------
-    if hasattr(args, "save"):
+    if hasattr(args, "save") and args.save:
         rc.write_file(trial_config, core_config["trial_path"] + core_config["trial_name"])
         rc.write_file(expt_config, core_config["expt_path"] + core_config["expt_name"])
-    if hasattr(args, "save_core"):
+    if hasattr(args, "save_core") and args.save_core:
         rc.write_file(core_config, current + CORE_FILE_NAME)
-    if hasattr(args, "save_trial"):
-        if args.save_trial is None:
+    if hasattr(args, "save_trial") and args.save_trial is not None:
+        if not len(args.save_trial):
             rc.write_file(trial_config, core_config["trial_path"] + core_config["trial_name"])
         else:
             rc.write_file(trial_config, core_config["trial_path"] + args.save_trial[0])
-    if hasattr(args, "save_experiment"):
-        if args.save_experiment is None:
+    if hasattr(args, "save_experiment") and args.save_experiment is not None:
+        if not len(args.save_experiment):
             rc.write_file(expt_config, core_config["expt_path"] + core_config["expt_name"])
         else:
             rc.write_file(expt_config, core_config["expt_path"] + args.save_experiment[0])
 
     # Print --------------------------------------------------------------------------------------------
-    if hasattr(args, "print"):
+    if hasattr(args, "print") and args.print:
         print(f'{"Trial Config":-<20}')
         rc.print_config(trial_config)
+        print()
+        print()
         print(f'{"Experiment Config":-<20}')
         rc.print_config(expt_config)
 
     # Run --------------------------------------------------------------------------------------------
-    if hasattr(args, "run"):
+    if hasattr(args, "run") and args.run:
         expt_config["experiment"] = get_registered_experiment(expt_config["experiment"])
 
         expt = Experiment(trial_config, expt_config)

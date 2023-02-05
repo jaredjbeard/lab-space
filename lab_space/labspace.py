@@ -147,11 +147,11 @@ if __name__=='__main__':
         expt_config["num_trials"] = args.num_trials[0]
     if hasattr(args, "num_processes") and args.num_processes is not None:
         expt_config["num_processes"] = args.num_processes[0]
-    if hasattr(args, "clear_save"):
-        if args.clear_save is None:
-            expt_config["save"] = True
+    if hasattr(args, "clear_save") and args.clear_save is not None:
+        if len(args.clear_save):
+            expt_config["clear_save"] = True
         else:
-            expt_config["save"] = args.clear_save[0]
+            expt_config["clear_save"] = args.clear_save[0]
     if hasattr(args, "loglevel") and args.loglevel is not None:
         expt_config["loglevel"] = args.loglevel[0]
     if hasattr(args, "compile") and args.compile is not None:
@@ -193,6 +193,8 @@ if __name__=='__main__':
     if hasattr(args, "print") and args.print:
         print(f'{"Trial Config":-<20}')
         rc.print_config(trial_config)
+        print()
+        print()
         print(f'{"Experiment Config":-<20}')
         rc.print_config(expt_config)
 

@@ -1,5 +1,3 @@
-- REMOVE PATH VALUES IN CORE DEFAULT
-- Check that installing CLI sets core default values and pushes them to core. 
 - Test CLI functionality r, up, utp, ut, uep, ue, nt, np, cs, l, c, f, fr, s, sc, st, se
 - Document Experiment
 - Document Labspace

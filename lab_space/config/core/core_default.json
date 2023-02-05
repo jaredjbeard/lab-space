@@ -1,7 +1,7 @@
 {
-    "trial_path": "",
-    "trial_name": "",
-    "expt_path": "",
-    "expt_name": "",
+    "trial_path": "/home/jared/lab-space/lab_space/config/",
+    "trial_name": "trial_config.json",
+    "expt_path": "/home/jared/lab-space/lab_space/config/",
+    "expt_name": "expt_config.json",
     "functions": { }
 }

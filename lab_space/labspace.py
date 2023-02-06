@@ -87,8 +87,8 @@ if __name__=='__main__':
     
     parser.add_argument('-nt',  '--num_trials',                 type=int, nargs = 1,  help='Number of trials to run')
     parser.add_argument('-np',  '--num_processes',              type=int, nargs = 1,  help='Number of processes to run')
-    parser.add_argument('-cs',  '--clear-save',                 type=bool,nargs = 1,  help='Clears save file')
-    parser.add_argument('-l',   '--loglevel',                   type=str, nargs = 1,  help='Sets log level')
+    parser.add_argument('-cs',  '--clear_save',                 type=int ,nargs = 1,  help='Clears save file, 0 -> false, 1 -> true')
+    parser.add_argument('-l',   '--log_level',                   type=str, nargs = 1,  help='Sets log level')
     parser.add_argument('-c',   '--compile',       action="store_const", const=True,  help='Compiles trial config file')
 
     parser.add_argument('-f',    '--function',                  type=str, nargs = 1,  help='Function to run')
@@ -148,9 +148,9 @@ if __name__=='__main__':
     if hasattr(args, "num_processes") and args.num_processes is not None:
         expt_config["n_processes"] = args.num_processes[0]
     if hasattr(args, "clear_save") and args.clear_save is not None:
-        expt_config["clear_save"] = args.clear_save[0]
-    if hasattr(args, "loglevel") and args.loglevel is not None:
-        expt_config["log_level"] = args.loglevel[0]
+        expt_config["clear_save"] = bool(args.clear_save[0])
+    if hasattr(args, "log_level") and args.log_level is not None:
+        expt_config["log_level"] = args.log_level[0]
     if hasattr(args, "compile") and args.compile is not None:
         if (hasattr(args, "save") and args.save is not None) or (hasattr(args, "save_trial") and args.save_trial is not None):
             trial_config = compile_to_list(trial_config)

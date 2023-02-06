@@ -79,6 +79,10 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Lab Space CLI')
     parser.add_argument('-r',   '--run',           action="store_const", const=True,  help='Runs algorithm, if unspecified runs user default')
     
+    # need to add update function for saving data with path and file
+    """
+    Propose new approach to update 
+    """
     parser.add_argument('-up',  '--update_path',                type=str, nargs ="+", help='Updates path of both config files, if unspecified resets to factory default')
     parser.add_argument('-utp', '--update_trial_path',          type=str, nargs ="+", help='Updates path of trial config files, if unspecified resets to factory default')
     parser.add_argument('-ut',  '--update_trial',               type=str, nargs ="+", help='Updates file name for trial config, if unspecified resets to factory default')
@@ -97,7 +101,7 @@ if __name__=='__main__':
     parser.add_argument('-s',    '--save',         action="store_const", const=True,  help='Saves settings for experiment and trial data to current files')
     parser.add_argument('-sc',   '--save_core',                           nargs ="+", help='Saves settings for core')
     parser.add_argument('-st',   '--save_trial',                type=str, nargs ="+", help='Saves settings for trial data, if argument specified saves to that file in path')
-    parser.add_argument('-se',   '--save_path',                 type=str, nargs ="+", help='Saves settings for experiment data, if argument specified saves to that file in path')
+    parser.add_argument('-se',   '--save_experiment',                 type=str, nargs ="+", help='Saves settings for experiment data, if argument specified saves to that file in path')
     
     parser.add_argument('-p',    '--print',        action="store_const", const=True,  help='Prints config file')
 

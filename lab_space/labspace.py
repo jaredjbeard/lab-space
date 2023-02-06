@@ -192,6 +192,10 @@ if __name__=='__main__':
 
     # Print --------------------------------------------------------------------------------------------
     if hasattr(args, "print") and args.print:
+        print(f'{"Core Config":-<20}')
+        rc.print_config(core_config)
+        print()
+        print()
         print(f'{"Trial Config":-<20}')
         rc.print_config(trial_config)
         print()

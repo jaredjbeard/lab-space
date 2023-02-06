@@ -87,7 +87,7 @@ if __name__=='__main__':
     
     parser.add_argument('-nt',  '--num_trials',                 type=int, nargs = 1,  help='Number of trials to run')
     parser.add_argument('-np',  '--num_processes',              type=int, nargs = 1,  help='Number of processes to run')
-    parser.add_argument('-cs',  '--clear-save',                 type=bool,nargs ="+", help='Clears save file, default is true')
+    parser.add_argument('-cs',  '--clear-save',                 type=bool,nargs = 1,  help='Clears save file')
     parser.add_argument('-l',   '--loglevel',                   type=str, nargs = 1,  help='Sets log level')
     parser.add_argument('-c',   '--compile',       action="store_const", const=True,  help='Compiles trial config file')
 
@@ -144,16 +144,13 @@ if __name__=='__main__':
     expt_config = rc.read_file(core_config["expt_path"] + core_config["expt_name"])
 
     if hasattr(args, "num_trials") and args.num_trials is not None:
-        expt_config["num_trials"] = args.num_trials[0]
+        expt_config["n_trials"] = args.num_trials[0]
     if hasattr(args, "num_processes") and args.num_processes is not None:
-        expt_config["num_processes"] = args.num_processes[0]
+        expt_config["n_processes"] = args.num_processes[0]
     if hasattr(args, "clear_save") and args.clear_save is not None:
-        if len(args.clear_save):
-            expt_config["clear_save"] = True
-        else:
-            expt_config["clear_save"] = args.clear_save[0]
+        expt_config["clear_save"] = args.clear_save[0]
     if hasattr(args, "loglevel") and args.loglevel is not None:
-        expt_config["loglevel"] = args.loglevel[0]
+        expt_config["log_level"] = args.loglevel[0]
     if hasattr(args, "compile") and args.compile is not None:
         if (hasattr(args, "save") and args.save is not None) or (hasattr(args, "save_trial") and args.save_trial is not None):
             trial_config = compile_to_list(trial_config)
@@ -202,5 +199,5 @@ if __name__=='__main__':
     if hasattr(args, "run") and args.run:
         expt_config["experiment"] = get_registered_experiment(expt_config["experiment"])
 
-        expt = Experiment(trial_config, expt_config)
+        expt = Experiment(trial_config, expt_config, expt_config["log_level"])
         expt.run()

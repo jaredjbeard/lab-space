@@ -3,5 +3,6 @@
     "n_trials": 1,
     "n_processes": 1,
     "save_file": null,
-    "clear_save": false
+    "clear_save": false,
+    "log_level": "WARNING"
 }

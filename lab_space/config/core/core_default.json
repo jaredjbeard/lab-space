@@ -1,7 +1,7 @@
 {
     "trial_path": "",
-    "trial_name": "",
+    "trial_name": "trial_config.json",
     "expt_path": "",
-    "expt_name": "",
-    "functions": { }
+    "expt_name": "expt_config.json",
+    "experiments": { }
 }

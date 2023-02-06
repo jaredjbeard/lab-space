@@ -42,14 +42,16 @@ def register_experiment(module_path, module_name, func_key_name, func_name):
     except:
         raise ValueError("Function not Found")
 
-    with open(current + CORE_FILE_NAME, 'r+') as f:
+    with open(current + CORE_FILE_NAME, 'rb') as f:
         core_config = json.load(f)
         temp_dict = {
                 "module_path": module_path,
                 "module_name": module_name,
                 "function_name": func_name
         }
-        core_config["expeiments"].update({func_key_name:temp_dict})
+        core_config["experiments"].update({func_key_name:temp_dict})
+    with open(current + CORE_FILE_NAME, 'w') as f:
+        json.dump(core_config, f, indent=4)
 
 def get_registered_experiment(experiment):
     """
@@ -79,6 +81,10 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Lab Space CLI')
     parser.add_argument('-r',   '--run',           action="store_const", const=True,  help='Runs algorithm, if unspecified runs user default')
     
+    # need to add update function for saving data with path and file
+    """
+    Propose new approach to update 
+    """
     parser.add_argument('-up',  '--update_path',                type=str, nargs ="+", help='Updates path of both config files, if unspecified resets to factory default')
     parser.add_argument('-utp', '--update_trial_path',          type=str, nargs ="+", help='Updates path of trial config files, if unspecified resets to factory default')
     parser.add_argument('-ut',  '--update_trial',               type=str, nargs ="+", help='Updates file name for trial config, if unspecified resets to factory default')
@@ -87,17 +93,17 @@ if __name__=='__main__':
     
     parser.add_argument('-nt',  '--num_trials',                 type=int, nargs = 1,  help='Number of trials to run')
     parser.add_argument('-np',  '--num_processes',              type=int, nargs = 1,  help='Number of processes to run')
-    parser.add_argument('-cs',  '--clear-save',                 type=bool,nargs ="+", help='Clears save file, default is true')
-    parser.add_argument('-l',   '--loglevel',                   type=str, nargs = 1,  help='Sets log level')
+    parser.add_argument('-cs',  '--clear_save',                 type=int ,nargs = 1,  help='Clears save file, 0 -> false, 1 -> true')
+    parser.add_argument('-l',   '--log_level',                   type=str, nargs = 1,  help='Sets log level')
     parser.add_argument('-c',   '--compile',       action="store_const", const=True,  help='Compiles trial config file')
 
-    parser.add_argument('-f',    '--function',                  type=str, nargs = 1,  help='Function to run')
-    parser.add_argument('-fr',   '--function_register',         type=str, nargs ="+",  help='Function to register, takes 4 arguments: path, module, name, and function. If only 3 specified, current working directory will be used as path.')
+    parser.add_argument('-e',    '--experiment',                type=str, nargs = 1,  help='Function to run')
+    parser.add_argument('-er',   '--experiment_register',       type=str, nargs ="+",  help='Function to register, takes 4 arguments: path, module, name, and function. If only 3 specified, current working directory will be used as path.')
     
     parser.add_argument('-s',    '--save',         action="store_const", const=True,  help='Saves settings for experiment and trial data to current files')
     parser.add_argument('-sc',   '--save_core',                           nargs ="+", help='Saves settings for core')
     parser.add_argument('-st',   '--save_trial',                type=str, nargs ="+", help='Saves settings for trial data, if argument specified saves to that file in path')
-    parser.add_argument('-se',   '--save_path',                 type=str, nargs ="+", help='Saves settings for experiment data, if argument specified saves to that file in path')
+    parser.add_argument('-se',   '--save_experiment',                 type=str, nargs ="+", help='Saves settings for experiment data, if argument specified saves to that file in path')
     
     parser.add_argument('-p',    '--print',        action="store_const", const=True,  help='Prints config file')
 
@@ -144,16 +150,13 @@ if __name__=='__main__':
     expt_config = rc.read_file(core_config["expt_path"] + core_config["expt_name"])
 
     if hasattr(args, "num_trials") and args.num_trials is not None:
-        expt_config["num_trials"] = args.num_trials[0]
+        expt_config["n_trials"] = args.num_trials[0]
     if hasattr(args, "num_processes") and args.num_processes is not None:
-        expt_config["num_processes"] = args.num_processes[0]
+        expt_config["n_processes"] = args.num_processes[0]
     if hasattr(args, "clear_save") and args.clear_save is not None:
-        if len(args.clear_save):
-            expt_config["clear_save"] = True
-        else:
-            expt_config["clear_save"] = args.clear_save[0]
-    if hasattr(args, "loglevel") and args.loglevel is not None:
-        expt_config["loglevel"] = args.loglevel[0]
+        expt_config["clear_save"] = bool(args.clear_save[0])
+    if hasattr(args, "log_level") and args.log_level is not None:
+        expt_config["log_level"] = args.log_level[0]
     if hasattr(args, "compile") and args.compile is not None:
         if (hasattr(args, "save") and args.save is not None) or (hasattr(args, "save_trial") and args.save_trial is not None):
             trial_config = compile_to_list(trial_config)
@@ -162,14 +165,14 @@ if __name__=='__main__':
         
 
     # Function Registration -----------------------------------------------------------------
-    if hasattr(args, "function") and args.function is not None:
-        expt_config["function"] = get_registered_experiment(args.function[0])
+    if hasattr(args, "experiment") and args.experiment is not None:
+        expt_config["experiment"] = args.experiment[0]
 
-    if hasattr(args, "function_register") and args.function_register is not None:
-        if len(args.function) == 4:
-            register_experiment(args.function_register[0], args.function_register[1], args.function_register[2], args.function_register[3])
+    if hasattr(args, "experiment_register") and args.experiment_register is not None:
+        if len(args.experiment_register) == 4:
+            register_experiment(args.experiment_register[0], args.experiment_register[1], args.experiment_register[2], args.experiment_register[3])
         else:
-            register_experiment(os.getcwd(), args.function_register[1], args.function_register[2], args.function_register[3])
+            register_experiment(os.getcwd(), args.experiment_register[1], args.experiment_register[2], args.experiment_register[3])
         # register experiment
 
     # Save --------------------------------------------------------------------------------------------
@@ -191,6 +194,10 @@ if __name__=='__main__':
 
     # Print --------------------------------------------------------------------------------------------
     if hasattr(args, "print") and args.print:
+        print(f'{"Core Config":-<20}')
+        rc.print_config(core_config)
+        print()
+        print()
         print(f'{"Trial Config":-<20}')
         rc.print_config(trial_config)
         print()
@@ -202,5 +209,5 @@ if __name__=='__main__':
     if hasattr(args, "run") and args.run:
         expt_config["experiment"] = get_registered_experiment(expt_config["experiment"])
 
-        expt = Experiment(trial_config, expt_config)
+        expt = Experiment(trial_config, expt_config, expt_config["log_level"])
         expt.run()

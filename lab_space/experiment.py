@@ -20,6 +20,8 @@ import itertools
 import pandas as pd
 import pickle
 
+import nestifydict as nd
+
 
 class Experiment():
     """
@@ -44,12 +46,15 @@ class Experiment():
         log_levels = {"NOTSET": logging.NOTSET, "DEBUG": logging.DEBUG, "INFO": logging.INFO, "WARNING": logging.WARNING, "ERROR": logging.ERROR ,"CRITICAL": logging.CRITICAL}
         self._log_level = log_levels[log_level]
                                              
-        logging.basicConfig(stream=sys.stdout, format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s', level=self._expt_config["log_level"])
+        logging.basicConfig(stream=sys.stdout, format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s', level=self._log_level)
         self._log = logging.getLogger(__name__)
         
-        self._log.warn("RunExperiment Init, perform " + str(expt_config["n_trials"]) + " trials across " + str(expt_config["n_processes"]) + "processes")
+        self._log.warn("RunExperiment Init, perform " + str(expt_config["n_trials"]) + " trials across " + str(expt_config["n_processes"]) + " processes")
 
         self.__lock = Lock()
+        
+        self._trial_config = None
+        self._expt_config = None
 
         self.reset(trial_config, expt_config)
         
@@ -60,24 +65,27 @@ class Experiment():
         :param trial_config: (list(dict)) Configurations for each trial, *default*: None
         :param expt_config: (dict) Experiment configuration, *default*: None
         """
+        
         if trial_config is not None:
             self._trial_config = trial_config
         if expt_config is not None:
-            expt_config = {}
-        if "experiment" not in expt_config:
+            self._expt_config = nd.merge(self._expt_config, expt_config)
+
+
+        if "experiment" not in self._expt_config:
             raise ValueError("Must provide experiment function")
-        if "n_trials" not in expt_config:
-            expt_config["n_trials"] = 1
-        if "n_processes" not in expt_config:
-            expt_config["n_processes"] = 1
-        if "save_file" not in expt_config:
-            expt_config["save_file"] = None
-        if "clear_save" not in expt_config:
-            expt_config["clear_save"] = False
-        elif expt_config["clear_save"] and expt_config["save_file"] is not None:
-            with open(expt_config["save_file"], 'wb') as f:
+        if "n_trials" not in self._expt_config:
+            self._expt_config["n_trials"] = 1
+        if "n_processes" not in self._expt_config:
+            self._expt_config["n_processes"] = 1
+        if "save_file" not in self._expt_config:
+            self._expt_config["save_file"] = None
+        if "clear_save" not in self._expt_config:
+            self._expt_config["clear_save"] = False
+        elif self._expt_config["clear_save"] and self._expt_config["save_file"] is not None:
+            with open(self._expt_config["save_file"], 'wb') as f:
                     export_file(pd.DataFrame(), f)
-        self._expt_config = expt_config
+
         self._log.warn("Reset experiment")
 
     def run(self, trial_config = None, expt_config : dict = None):

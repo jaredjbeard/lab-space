@@ -1,7 +1,4 @@
 {
-    "experiment": null,
-    "n_trials": 1,
-    "n_processes": 1,
-    "save_file": null,
-    "clear_save": false
+    "stitch": ["values"],
+    "values": [{"a":1}, {"a":2}, {"a":3}, {"b":4}, {"b":5}, {"b":6}]
 }

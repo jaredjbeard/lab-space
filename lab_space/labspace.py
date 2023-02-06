@@ -42,14 +42,16 @@ def register_experiment(module_path, module_name, func_key_name, func_name):
     except:
         raise ValueError("Function not Found")
 
-    with open(current + CORE_FILE_NAME, 'r+') as f:
+    with open(current + CORE_FILE_NAME, 'rb') as f:
         core_config = json.load(f)
         temp_dict = {
                 "module_path": module_path,
                 "module_name": module_name,
                 "function_name": func_name
         }
-        core_config["expeiments"].update({func_key_name:temp_dict})
+        core_config["experiments"].update({func_key_name:temp_dict})
+    with open(current + CORE_FILE_NAME, 'w') as f:
+        json.dump(core_config, f, indent=4)
 
 def get_registered_experiment(experiment):
     """
@@ -95,8 +97,8 @@ if __name__=='__main__':
     parser.add_argument('-l',   '--log_level',                   type=str, nargs = 1,  help='Sets log level')
     parser.add_argument('-c',   '--compile',       action="store_const", const=True,  help='Compiles trial config file')
 
-    parser.add_argument('-f',    '--function',                  type=str, nargs = 1,  help='Function to run')
-    parser.add_argument('-fr',   '--function_register',         type=str, nargs ="+",  help='Function to register, takes 4 arguments: path, module, name, and function. If only 3 specified, current working directory will be used as path.')
+    parser.add_argument('-e',    '--experiment',                type=str, nargs = 1,  help='Function to run')
+    parser.add_argument('-er',   '--experiment_register',       type=str, nargs ="+",  help='Function to register, takes 4 arguments: path, module, name, and function. If only 3 specified, current working directory will be used as path.')
     
     parser.add_argument('-s',    '--save',         action="store_const", const=True,  help='Saves settings for experiment and trial data to current files')
     parser.add_argument('-sc',   '--save_core',                           nargs ="+", help='Saves settings for core')
@@ -163,14 +165,14 @@ if __name__=='__main__':
         
 
     # Function Registration -----------------------------------------------------------------
-    if hasattr(args, "function") and args.function is not None:
-        expt_config["function"] = get_registered_experiment(args.function[0])
+    if hasattr(args, "experiment") and args.experiment is not None:
+        expt_config["experiment"] = args.experiment[0]
 
-    if hasattr(args, "function_register") and args.function_register is not None:
-        if len(args.function) == 4:
-            register_experiment(args.function_register[0], args.function_register[1], args.function_register[2], args.function_register[3])
+    if hasattr(args, "experiment_register") and args.experiment_register is not None:
+        if len(args.experiment_register) == 4:
+            register_experiment(args.experiment_register[0], args.experiment_register[1], args.experiment_register[2], args.experiment_register[3])
         else:
-            register_experiment(os.getcwd(), args.function_register[1], args.function_register[2], args.function_register[3])
+            register_experiment(os.getcwd(), args.experiment_register[1], args.experiment_register[2], args.experiment_register[3])
         # register experiment
 
     # Save --------------------------------------------------------------------------------------------

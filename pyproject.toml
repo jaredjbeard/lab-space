@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lab-space"
-version = "0.0.2.1"
+version = "0.0.2.3"
 authors = [
   { name="Jared J. Beard", email="jbeard6@mix.wvu.edu" },
 ]

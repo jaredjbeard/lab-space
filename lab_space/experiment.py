@@ -71,7 +71,6 @@ class Experiment():
         if expt_config is not None:
             self._expt_config = nd.merge(self._expt_config, expt_config)
 
-
         if "experiment" not in self._expt_config:
             raise ValueError("Must provide experiment function")
         if "n_trials" not in self._expt_config:
@@ -99,9 +98,9 @@ class Experiment():
         if trial_config is not None or expt_config is not None:
             self.reset(trial_config, expt_config)
 
-        if self._trial_config is None:
+        if self._trial_config == []:
             raise ValueError("Must provide trial configuration")
-        if self._expt_config["experiment"] is None:
+        if self._expt_config["experiment"] == {}:
             raise ValueError("Must provide experiment function")
 
         self._log.warn("Run experiment")

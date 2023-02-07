@@ -3,5 +3,6 @@
     "trial_name": "trial_config.json",
     "expt_path": "",
     "expt_name": "expt_config.json",
+    "save_path": "",
     "experiments": { }
 }

@@ -1,6 +1,6 @@
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "nestifydict", "reconfigurator"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -25,5 +25,5 @@ include_package_data = true
 where = ["lab_space"]
 
 [project.urls]
-"Homepage" = "https://github.com/jaredjbeard/reconfigurator"
-"Documentation" = "https://reconfigurator.readthedocs.io/en/latest/introduction.html"
+"Homepage" = "https://github.com/jaredjbeard/lab-space"
+"Documentation" = "https://lab-space.readthedocs.io/en/latest/introduction.html"

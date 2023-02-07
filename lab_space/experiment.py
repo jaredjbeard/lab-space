@@ -53,8 +53,8 @@ class Experiment():
 
         self.__lock = Lock()
         
-        self._trial_config = None
-        self._expt_config = None
+        self._trial_config = []
+        self._expt_config = {}
 
         self.reset(trial_config, expt_config)
         

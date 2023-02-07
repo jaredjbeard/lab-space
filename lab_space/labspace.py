@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 """
 This script is handle command line argmuents for starting experiments and analyzing data.
 """

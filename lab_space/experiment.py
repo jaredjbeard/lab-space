@@ -29,7 +29,7 @@ class Experiment():
 
     Users should provide two parameter files.
 
-    :param trial_config: (list(dict) or generator) Configurations for each trial, *default*: None
+    :param trial_config: (list(dict)/generator) Configurations for each trial, *default*: None
     :param expt_config: (dict) Experiment configuration file containing the following keys:
         - *default*: None
         - "experiment": (func) Reference to function under test
@@ -62,7 +62,7 @@ class Experiment():
         """
         Reset experiment with new configurations
 
-        :param trial_config: (list(dict)) Configurations for each trial, *default*: None
+        :param trial_config: (list(dict)/generator) Configurations for each trial, *default*: None
         :param expt_config: (dict) Experiment configuration, *default*: None
         """
         
@@ -91,7 +91,7 @@ class Experiment():
         """
         Run experiment with new configurations
 
-        :param trial_config: (list(dict)) Configurations for each trial, *default*: None
+        :param trial_config: (list(dict)/generator) Configurations for each trial, *default*: None
         :param expt_config: (dict) Experiment configuration, *default*: None
         :return: (pandas.DataFrame) data
         """

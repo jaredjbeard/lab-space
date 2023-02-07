@@ -1,4 +1,9 @@
-- Test CLI functionality r, up, utp, ut, uep, ue, c, e, er, s, sc, st, se
+- Test CLI functionality r, 
+                         ts, tc, 
+                         s, sc, st, se
+- Test experiment single threaded, multithreaded, single w/ save, multi w/ save, clear save, logging
+    - itertools repeat was being troublesome
+- Test function register with module in installed package
 - Document Experiment
 - Document Labspace
 - Document analysis

@@ -17,14 +17,8 @@ ln -s ../labspace.py $save_loc
 export_path='export PATH="$PATH:parent/bin/"'
 export_path=${export_path/parent/$parent}
 
-if command -v python
-then 
-    echo "Initializing Core to Python"
-    python $parent/scripts/setup_core.py
-else
-    echo "Initializing Core to Python3"
-    python3 $parent/scripts/setup_core.py
-fi
+echo "Initializing Core to Python3"
+python3 $parent/scripts/setup_core.py
 
 if grep -Fxq "$export_path" ~/.bashrc; then
     echo "Lab Space CLI Updated!"

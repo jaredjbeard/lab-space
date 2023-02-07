@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 """
 This script is intended to run single or multithreaded experiments.
 """
@@ -53,8 +53,8 @@ class Experiment():
 
         self.__lock = Lock()
         
-        self._trial_config = None
-        self._expt_config = None
+        self._trial_config = []
+        self._expt_config = {}
 
         self.reset(trial_config, expt_config)
         
@@ -70,7 +70,6 @@ class Experiment():
             self._trial_config = trial_config
         if expt_config is not None:
             self._expt_config = nd.merge(self._expt_config, expt_config)
-
 
         if "experiment" not in self._expt_config:
             raise ValueError("Must provide experiment function")
@@ -99,9 +98,9 @@ class Experiment():
         if trial_config is not None or expt_config is not None:
             self.reset(trial_config, expt_config)
 
-        if self._trial_config is None:
+        if self._trial_config == []:
             raise ValueError("Must provide trial configuration")
-        if self._expt_config["experiment"] is None:
+        if self._expt_config["experiment"] == {}:
             raise ValueError("Must provide experiment function")
 
         self._log.warn("Run experiment")

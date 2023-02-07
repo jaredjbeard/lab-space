@@ -27,14 +27,14 @@ import importlib.util
 CORE_FILE_NAME = "/config/core/core.json"
 CORE_DEFAULT_FILE_NAME = "/config/core/core_default.json"
 
-def register_experiment(module_path, module_name, func_key_name, func_name):
+def register_experiment(module_name :str, func_name : str = None, func_key_name : str = None, module_path : str = None):
     """
     Registers experiment to be run
 
-    :param module_path: (str) Path to module
     :param module_name: (str) Name of experiment file
-    :param func_key_name: (str) Key to identify function
     :param func_name: (str) Function to call register
+    :param module_path: (str) Path to module
+    :param func_key_name: (str) Key to identify function
     """
 
     try: 
@@ -49,11 +49,13 @@ def register_experiment(module_path, module_name, func_key_name, func_name):
                 "module_name": module_name,
                 "function_name": func_name
         }
+        if func_key_name is None:
+            func_key_name = func_name
         core_config["experiments"].update({func_key_name:temp_dict})
     with open(current + CORE_FILE_NAME, 'w') as f:
         json.dump(core_config, f, indent=4)
 
-def deregister_experiment(experiment):
+def deregister_experiment(experiment : str):
     """
     Deregisters experiment to be run
 
@@ -68,7 +70,7 @@ def deregister_experiment(experiment):
     with open(current + CORE_FILE_NAME, 'w') as f:
         json.dump(core_config, f, indent=4)
 
-def get_registered_experiment(experiment):
+def get_registered_experiment(experiment : str):
     """
     Gets all registered experiment
 
@@ -83,19 +85,22 @@ def get_registered_experiment(experiment):
             raise ValueError("No Registered Experiments")
     return call_function(expt_config["module_path"], expt_config["module_name"], expt_config["function_name"])
 
-def call_function(module_path, module_name, func_name):
+def call_function(module_name : str, func_name : str, module_path :str = None):
     """
     Calls function from module
 
-    :param module_path: (str) Path to module
     :param module_name: (str) Name of experiment file
     :param func_name: (str) Function to call register
+    :param module_path: (str) Path to module
     :return: (function) Experiment function reference
     """
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
+    if module_path is not None:
+        spec = importlib.util.spec_from_file_location(module_name, module_path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+    else:
+        module = importlib.import_module(module_name)
     func = getattr(module, func_name)
     return func
 
@@ -121,8 +126,7 @@ if __name__=='__main__':
     parser.add_argument('-tc',  '--compile',           action="store_const", const=True,  help='Compiles trial config file')
 
     parser.add_argument('-e',    '--experiment',                    type=str, nargs = 1,  help='Function to run')
-    parser.add_argument('-er',   '--experiment_register',           type=str, nargs ="+", help='Function to register, takes 4 arguments: path, module, name, and function. If only 3 specified, current working directory will be used as path.')
-    parser.add_argument('-el',   '--experiment_list',  action="store_const", const=True,  help='Lists all registered experiments')
+    parser.add_argument('-er',   '--experiment_register',           type=str, nargs ="+", help='Function to register, takes 4 arguments: path, module, name, and function. If only 3 specified, module assumed to be installed/importable')
     parser.add_argument('-ed',   '--experiment_deregister',         type=str, nargs = 1,  help='Deletes experiment from registry')
     
     parser.add_argument('-s',    '--save',             action="store_const", const=True,  help='Saves settings for experiment and trial data to current files')
@@ -181,7 +185,7 @@ if __name__=='__main__':
         expt_config["clear_save"] = bool(args.clear_save[0])
     if args.log_level is not None:
         expt_config["log_level"] = args.log_level[0]
-    if  args.compile is not None:
+    if args.compile is not None:
         if (hasattr(args, "save") and args.save is not None) or (hasattr(args, "save_trial") and args.save_trial is not None):
             trial_config = compile_to_list(trial_config)
         else:
@@ -194,10 +198,9 @@ if __name__=='__main__':
 
     if args.experiment_register is not None:
         if len(args.experiment_register) == 4:
-            register_experiment(args.experiment_register[0], args.experiment_register[1], args.experiment_register[2], args.experiment_register[3])
+            register_experiment(args.experiment_register[1], args.experiment_register[3], args.experiment_register[2], args.experiment_register[0])
         else:
-            register_experiment(os.getcwd(), args.experiment_register[1], args.experiment_register[2], args.experiment_register[3])
-        # register experiment
+            register_experiment(args.experiment_register[0], args.experiment_register[2], args.experiment_register[1])
 
     # Save --------------------------------------------------------------------------------------------
     if args.save is not None and args.save:
@@ -223,7 +226,10 @@ if __name__=='__main__':
         print()
         print()
         print(f'{"Trial Config":-<20}')
-        rc.print_config(trial_config)
+        if isinstance(trial_config,dict):
+            rc.print_config(trial_config)
+        else:
+            print(trial_config)
         print()
         print()
         print(f'{"Experiment Config":-<20}')

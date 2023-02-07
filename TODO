@@ -1,6 +1,5 @@
 - Test CLI functionality r, 
                          ts, tc, 
-                         e, er, el, ed, 
                          s, sc, st, se
 - Test experiment single threaded, multithreaded, single w/ save, multi w/ save, clear save, logging
     - itertools repeat was being troublesome

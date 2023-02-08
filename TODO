@@ -1,4 +1,4 @@
-- Test experiment single threaded, multithreaded, multi w/ save, n_copies
+- Test experiment n_copies
     - itertools repeat was being troublesome
 - Document Experiment
 - Document Labspace

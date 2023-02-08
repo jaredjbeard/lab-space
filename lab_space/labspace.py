@@ -14,6 +14,7 @@ current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
 
+from copy import deepcopy
 import argparse
 import json
 import reconfigurator.reconfigurator as rc
@@ -36,9 +37,9 @@ def register_experiment(module_name :str, func_name : str = None, func_key_name 
     :param module_path: (str) Path to module
     :param func_key_name: (str) Key to identify function
     """
-
+    
     try: 
-        f = call_function(module_path, module_name, func_name)
+        f = call_function(module_name, func_name, module_path)
     except:
         raise ValueError("Function not Found")
 
@@ -83,7 +84,7 @@ def get_registered_experiment(experiment : str):
             expt_config = core_config["experiments"][experiment]
         else: 
             raise ValueError("No Registered Experiments")
-    return call_function(expt_config["module_path"], expt_config["module_name"], expt_config["function_name"])
+    return call_function(expt_config["module_name"], expt_config["function_name"], expt_config["module_path"])
 
 def call_function(module_name : str, func_name : str, module_path :str = None):
     """
@@ -104,23 +105,22 @@ def call_function(module_name : str, func_name : str, module_path :str = None):
     func = getattr(module, func_name)
     return func
 
-
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Lab Space CLI')
     parser.add_argument('-r',   '--run',           action="store_const", const=True,  help='Runs algorithm, if unspecified runs user default')
     
     parser.add_argument('-cr',  '--configure_reset',   action="store_const", const=True,  help='Resets all configuration to factory default')
-    parser.add_argument('-cp',  '--configure_path',                 type=str, nargs = 1, help='Configures path of config and data files, if unspecified resets to factory default')
-    parser.add_argument('-ctp', '--configure_trial_path',           type=str, nargs = 1, help='Configures path of trial config files, if unspecified resets to factory default')
-    parser.add_argument('-ct',  '--configure_trial',                type=str, nargs = 1, help='Configures file name for trial config, if unspecified resets to factory default')
-    parser.add_argument('-cep', '--configure_experiment_path',      type=str, nargs = 1, help='Configures path of experiment config files, if unspecified resets to factory default')
-    parser.add_argument('-ce',  '--configure_experiment',           type=str, nargs = 1, help='Configures file name for experiment config, if unspecified resets to factory default')
-    parser.add_argument('-csp', '--configure_save_path',            type=str, nargs = 1, help='Configures path of save files, if unspecified resets to factory default')
+    parser.add_argument('-cp',  '--configure_path',                 type=str, nargs = 1, help='Configures path of config and data files')
+    parser.add_argument('-ctp', '--configure_trial_path',           type=str, nargs = 1, help='Configures path of trial config files')
+    parser.add_argument('-ct',  '--configure_trial',                type=str, nargs = 1, help='Configures file name for trial config')
+    parser.add_argument('-cep', '--configure_experiment_path',      type=str, nargs = 1, help='Configures path of experiment config files')
+    parser.add_argument('-ce',  '--configure_experiment',           type=str, nargs = 1, help='Configures file name for experiment config')
+    parser.add_argument('-csp', '--configure_save_path',            type=str, nargs = 1, help='Configures path of save files')
     
     parser.add_argument('-tt',  '--num_trials',                     type=int, nargs = 1,  help='Number of trials to run')
     parser.add_argument('-tp',  '--num_processes',                  type=int, nargs = 1,  help='Number of processes to run')
-    parser.add_argument('-ts',  '--save_file',                      type=str, nargs ="+", help='Updates file name for save files, if unspecified resets to factory default')
+    parser.add_argument('-ts',  '--save_file',                      type=str, nargs ="+", help='Updates file name for save files, if "none" will set to NoneType')
     parser.add_argument('-tcs', '--clear_save',                     type=int ,nargs = 1,  help='Clears save file, 0 -> false, 1 -> true')
     parser.add_argument('-tl',  '--log_level',                      type=str, nargs = 1,  help='Sets log level')
     parser.add_argument('-tc',  '--compile',           action="store_const", const=True,  help='Compiles trial config file')
@@ -129,9 +129,8 @@ if __name__=='__main__':
     parser.add_argument('-er',   '--experiment_register',           type=str, nargs ="+", help='Function to register, takes 4 arguments: path, module, name, and function. If only 3 specified, module assumed to be installed/importable')
     parser.add_argument('-ed',   '--experiment_deregister',         type=str, nargs = 1,  help='Deletes experiment from registry')
     
-    parser.add_argument('-s',    '--save',             action="store_const", const=True,  help='Saves settings for experiment and trial data to current files')
-    parser.add_argument('-sc',   '--save_core',                               nargs ="+", help='Saves settings for core')
-    parser.add_argument('-st',   '--save_trial',                    type=str, nargs ="+", help='Saves settings for trial data, if argument specified saves to that file in path')
+    parser.add_argument('-s',    '--save',             action="store_const", const=True,  help='Saves settings for experiment and trial data to current files. If trial is compiled, will append "c_" to file name and save compiled version')
+    parser.add_argument('-st',   '--save_trial',                    type=str, nargs ="+", help='Saves settings for trial data, if argument specified saves to that file in path. If trial is compiled, will append "c_" to file name and save compiled version')
     parser.add_argument('-se',   '--save_experiment',               type=str, nargs ="+", help='Saves settings for experiment data, if argument specified saves to that file in path')
     
     parser.add_argument('-p',    '--print',            action="store_const", const=True,  help='Prints config file')
@@ -159,11 +158,14 @@ if __name__=='__main__':
         core_config["trial_path"] = args.configure_path[0]
         core_config["expt_path"] = args.configure_path[0]
         core_config["save_path"] = args.configure_path[0]
+        rc.write_file(current + CORE_FILE_NAME, core_config)
 
     if args.configure_trial_path is not None:
         core_config["trial_path"] = args.configure_trial_path[0]
+        rc.write_file(current + CORE_FILE_NAME, core_config)
     if args.configure_trial is not None:
         core_config["trial_name"] = args.configure_trial[0]
+        rc.write_file(current + CORE_FILE_NAME, core_config)
     trial_config = rc.read_file(core_config["trial_path"] + core_config["trial_name"])
 
     if args.configure_experiment_path is not None:
@@ -174,8 +176,12 @@ if __name__=='__main__':
 
     if args.configure_save_path is not None:
         core_config["save_path"] = args.configure_save_path[0]
+        rc.write_file(current + CORE_FILE_NAME, core_config)
     if args.save_file is not None:
-        core_config["save_name"] = args.save_file[0]
+        if args.save_file[0] == "none":
+            core_config["save_file"] = None
+        else:
+            expt_config["save_file"] = args.save_file[0]
 
     if args.num_trials is not None:
         expt_config["n_trials"] = args.num_trials[0]
@@ -185,11 +191,10 @@ if __name__=='__main__':
         expt_config["clear_save"] = bool(args.clear_save[0])
     if args.log_level is not None:
         expt_config["log_level"] = args.log_level[0]
+    
+    uncompiled_trial_config = deepcopy(trial_config)
     if args.compile is not None:
-        if (hasattr(args, "save") and args.save is not None) or (hasattr(args, "save_trial") and args.save_trial is not None):
-            trial_config = compile_to_list(trial_config)
-        else:
-            trial_config = compile_as_generator(trial_config)
+        trial_config = compile_as_generator(trial_config)
         
 
     # Function Registration -----------------------------------------------------------------
@@ -204,20 +209,32 @@ if __name__=='__main__':
 
     # Save --------------------------------------------------------------------------------------------
     if args.save is not None and args.save:
-        rc.write_file(trial_config, core_config["trial_path"] + core_config["trial_name"])
-        rc.write_file(expt_config, core_config["expt_path"] + core_config["expt_name"])
-    if args.save_core is not None and args.save_core:
-        rc.write_file(core_config, current + CORE_FILE_NAME)
+        if args.compile is not None:
+            temp_tc = compile_to_list(uncompiled_trial_config)
+            rc.write_file(core_config["trial_path"] + "c_" + core_config["trial_name"], temp_tc)
+        else:
+            rc.write_file(core_config["trial_path"] + core_config["trial_name"], trial_config)
+        rc.write_file(core_config["expt_path"] + core_config["expt_name"], expt_config)
+    
     if args.save_trial is not None:
-        if not len(args.save_trial):
-            rc.write_file(trial_config, core_config["trial_path"] + core_config["trial_name"])
+        if args.save_trial == "none":
+            if args.compile is not None:
+                temp_tc = compile_to_list(uncompiled_trial_config)
+                rc.write_file(core_config["trial_path"] + "c_" + core_config["trial_name"], temp_tc)
+            else:
+                rc.write_file(core_config["trial_path"] + core_config["trial_name"], trial_config)
         else:
-            rc.write_file(trial_config, core_config["trial_path"] + args.save_trial[0])
+            if not isinstance(trial_config, list):
+                temp_tc = compile_to_list(uncompiled_trial_config)
+                rc.write_file(core_config["trial_path"] + "c_" + args.save_trial[0], temp_tc)
+            else:
+                rc.write_file(core_config["trial_path"] + args.save_trial[0], trial_config)
+    
     if args.save_experiment is not None:
-        if not len(args.save_experiment):
-            rc.write_file(expt_config, core_config["expt_path"] + core_config["expt_name"])
+        if args.save_experiment == "none":
+            rc.write_file(core_config["expt_path"] + core_config["expt_name"], expt_config)
         else:
-            rc.write_file(expt_config, core_config["expt_path"] + args.save_experiment[0])
+            rc.write_file(core_config["expt_path"] + args.save_experiment[0], expt_config)
 
     # Print --------------------------------------------------------------------------------------------
     if args.print is not None and args.print:
@@ -228,8 +245,10 @@ if __name__=='__main__':
         print(f'{"Trial Config":-<20}')
         if isinstance(trial_config,dict):
             rc.print_config(trial_config)
+        elif args.save is not None and args.save or args.save_trial is not None:
+            print(temp_tc)
         else:
-            print(trial_config)
+            print(uncompiled_trial_config)
         print()
         print()
         print(f'{"Experiment Config":-<20}')
@@ -238,7 +257,7 @@ if __name__=='__main__':
     # Run --------------------------------------------------------------------------------------------
     if args.run is not None and args.run:
         expt_config["experiment"] = get_registered_experiment(expt_config["experiment"])
-        if trial_config["save_file"] is not None:
-            trial_config["save_file"] = core_config["save_path"] + trial_config["save_file"]
+        if expt_config["save_file"] is not None:
+            expt_config["save_file"] = core_config["save_path"] + expt_config["save_file"]
         expt = Experiment(trial_config, expt_config, expt_config["log_level"])
         expt.run()

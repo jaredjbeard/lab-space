@@ -1,10 +1,7 @@
-- Test CLI functionality r, 
-                         ts, tc, 
-                         s, sc, st, se
-- Test experiment single threaded, multithreaded, single w/ save, multi w/ save, clear save, logging
-    - itertools repeat was being troublesome
-- Test function register with module in installed package
 - Document Experiment
 - Document Labspace
 - Document analysis
 
+- rebrand core as profiles and add profile updates for different projects
+- move experiment registry to reconfigurator and rebrand as function extraction
+- add analysis

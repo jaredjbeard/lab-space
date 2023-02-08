@@ -18,7 +18,8 @@ from multiprocessing import Pool, Lock
 import logging
 import itertools
 import pandas as pd
-import pickle
+from reconfigurator.reconfigurator import compile_as_generator
+from copy import deepcopy
 
 import nestifydict as nd
 
@@ -29,7 +30,7 @@ class Experiment():
 
     Users should provide two parameter files.
 
-    :param trial_config: (list(dict) or generator) Configurations for each trial, *default*: None
+    :param trial_config: (list(dict)/generator) Configurations for each trial, *default*: None
     :param expt_config: (dict) Experiment configuration file containing the following keys:
         - *default*: None
         - "experiment": (func) Reference to function under test
@@ -51,7 +52,8 @@ class Experiment():
         
         self._log.warn("RunExperiment Init, perform " + str(expt_config["n_trials"]) + " trials across " + str(expt_config["n_processes"]) + " processes")
 
-        self.__lock = Lock()
+        global expt_lock
+        expt_lock = Lock()
         
         self._trial_config = []
         self._expt_config = {}
@@ -62,7 +64,7 @@ class Experiment():
         """
         Reset experiment with new configurations
 
-        :param trial_config: (list(dict)) Configurations for each trial, *default*: None
+        :param trial_config: (list(dict)/generator) Configurations for each trial, *default*: None
         :param expt_config: (dict) Experiment configuration, *default*: None
         """
         
@@ -81,9 +83,9 @@ class Experiment():
             self._expt_config["save_file"] = None
         if "clear_save" not in self._expt_config:
             self._expt_config["clear_save"] = False
-        elif self._expt_config["clear_save"] and self._expt_config["save_file"] is not None:
-            with open(self._expt_config["save_file"], 'wb') as f:
-                    export_file(pd.DataFrame(), f)
+        if self._expt_config["clear_save"] and self._expt_config["save_file"] is not None and os.path.isfile(self._expt_config["save_file"]):
+            self._log.warn("Clearing save file")
+            os.remove(self._expt_config["save_file"])
 
         self._log.warn("Reset experiment")
 
@@ -91,7 +93,7 @@ class Experiment():
         """
         Run experiment with new configurations
 
-        :param trial_config: (list(dict)) Configurations for each trial, *default*: None
+        :param trial_config: (list(dict)/generator) Configurations for each trial, *default*: None
         :param expt_config: (dict) Experiment configuration, *default*: None
         :return: (pandas.DataFrame) data
         """
@@ -108,7 +110,8 @@ class Experiment():
 
         if self._expt_config["n_processes"] == 1:
             return self._run_single()
-        return self._run_multi()
+        else:
+            return self._run_multi()
 
     def _run_single(self):
         """
@@ -117,11 +120,12 @@ class Experiment():
         :return: (pandas.DataFrame) data
         """
         self._log.warn("Run experiment in single thread")
-        results = []
+        results = pd.DataFrame()
         for trial in self.__n_iterable(self._trial_config, self._expt_config["n_trials"]):
+            result = self._expt_config["experiment"](trial)
+            results = pd.concat([results, result])
             if self._expt_config["save_file"] is not None:
-                results.append(self._run_save(trial))
-            results.append(self._expt_config["experiment"](trial))
+                self._save(result)
         return results
 
     def _run_multi(self):
@@ -131,24 +135,28 @@ class Experiment():
         :return: (pandas.DataFrame) data
         """
         self._log.warn("Run experiment in multiple processes")
+
+        results = pd.DataFrame()
         with Pool(self._expt_config["n_processes"]) as p:
-            if self._expt_config["save_file"] is not None:
-                return p.map(self._run_save, self._n_iterable(self._trial_config, self._expt_config["n_trials"]))
-            return p.map(self._expt_config["experiment"], self._n_iterable(self._trial_config, self._expt_config["n_trials"]))
+            run_map = p.imap(self._expt_config["experiment"], self.__n_iterable(self._trial_config, self._expt_config["n_trials"]))
+            for result in run_map:
+                if self._expt_config["save_file"] is not None:
+                    self._save(result) 
+                results = pd.concat([results, result])
 
-    def _run_save(self, trial_config):
+        return results
+
+    def _save(self, result):
         """
-        Run experiment and save results
+        Save results
 
-        :param trial_config: (list(dict)) Configurations for each trial
+        :param result: (pd.DataFrame) result to save
         :return: (pandas.DataFrame) data
         """
-        result = self._expt_config["experiment"](trial_config)
-        with self.__lock:
+        with expt_lock:
             data = import_file(self._expt_config["save_file"])
-            pd.concat([data, result])
+            data = pd.concat([data, result])
             export_file(data,self._expt_config["save_file"])
-        return result
 
     def __n_iterable(self, iterable_el, n = 1):
         """
@@ -158,9 +166,14 @@ class Experiment():
         :param n: (int) Number of copies
         :return: () n copies of the input sequences
         """
-        for element in itertools.repeat(iterable_el, n):
-            for el in element:
-                yield el
+        for i in range(n):
+            if isinstance(iterable_el, list):
+                for el in iterable_el:
+                    yield el
+            else:
+                els = deepcopy(iterable_el)
+                for el in compile_as_generator(els):
+                    yield el
 
 def import_file(filepath):
     """
@@ -170,6 +183,8 @@ def import_file(filepath):
     :return: (pandas.DataFrame) the imported dataframe
     """
     extension = filepath.split(".")[-1]
+    if not os.path.isfile(filepath):
+        return pd.DataFrame()
     if extension == "csv":
         return pd.read_csv(filepath)
     elif extension == "xlsx":
@@ -196,3 +211,18 @@ def export_file(df, filepath):
         df.to_json(filepath, index=False)
     else:
         raise ValueError(f"Unsupported file type: {extension}")
+
+def check_and_create_file(file_path):
+    file_extension = os.path.splitext(file_path)[1]
+    if not os.path.exists(file_path):
+        empty_df = pd.DataFrame()
+        if file_extension == '.csv':
+            empty_df.to_csv(file_path, index=False)
+        elif file_extension == '.json':
+            empty_df.to_json(file_path)
+        elif file_extension == '.xlsx':
+            empty_df.to_excel(file_path, index=False)
+        else:
+            return "Invalid file type"
+        return "Empty file created at: " + file_path
+    return "File already exists at: " + file_path

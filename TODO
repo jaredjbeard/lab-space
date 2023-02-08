@@ -1,5 +1,4 @@
-- Test CLI functionality r,
-- Test experiment single threaded, multithreaded, single w/ save, multi w/ save, clear save, logging
+- Test experiment single threaded, multithreaded, multi w/ save, n_copies
     - itertools repeat was being troublesome
 - Document Experiment
 - Document Labspace

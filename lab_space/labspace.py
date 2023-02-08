@@ -37,9 +37,9 @@ def register_experiment(module_name :str, func_name : str = None, func_key_name 
     :param module_path: (str) Path to module
     :param func_key_name: (str) Key to identify function
     """
-
+    
     try: 
-        f = call_function(module_path, module_name, func_name)
+        f = call_function(module_name, func_name, module_path)
     except:
         raise ValueError("Function not Found")
 
@@ -84,7 +84,7 @@ def get_registered_experiment(experiment : str):
             expt_config = core_config["experiments"][experiment]
         else: 
             raise ValueError("No Registered Experiments")
-    return call_function(expt_config["module_path"], expt_config["module_name"], expt_config["function_name"])
+    return call_function(expt_config["module_name"], expt_config["function_name"], expt_config["module_path"])
 
 def call_function(module_name : str, func_name : str, module_path :str = None):
     """
@@ -129,8 +129,8 @@ if __name__=='__main__':
     parser.add_argument('-er',   '--experiment_register',           type=str, nargs ="+", help='Function to register, takes 4 arguments: path, module, name, and function. If only 3 specified, module assumed to be installed/importable')
     parser.add_argument('-ed',   '--experiment_deregister',         type=str, nargs = 1,  help='Deletes experiment from registry')
     
-    parser.add_argument('-s',    '--save',             action="store_const", const=True,  help='Saves settings for experiment and trial data to current files')
-    parser.add_argument('-st',   '--save_trial',                    type=str, nargs ="+", help='Saves settings for trial data, if argument specified saves to that file in path')
+    parser.add_argument('-s',    '--save',             action="store_const", const=True,  help='Saves settings for experiment and trial data to current files. If trial is compiled, will append "c_" to file name and save compiled version')
+    parser.add_argument('-st',   '--save_trial',                    type=str, nargs ="+", help='Saves settings for trial data, if argument specified saves to that file in path. If trial is compiled, will append "c_" to file name and save compiled version')
     parser.add_argument('-se',   '--save_experiment',               type=str, nargs ="+", help='Saves settings for experiment data, if argument specified saves to that file in path')
     
     parser.add_argument('-p',    '--print',            action="store_const", const=True,  help='Prints config file')

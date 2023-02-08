@@ -18,7 +18,6 @@ from multiprocessing import Pool, Lock
 import logging
 import itertools
 import pandas as pd
-import pickle
 
 import nestifydict as nd
 
@@ -81,9 +80,9 @@ class Experiment():
             self._expt_config["save_file"] = None
         if "clear_save" not in self._expt_config:
             self._expt_config["clear_save"] = False
-        elif self._expt_config["clear_save"] and self._expt_config["save_file"] is not None:
-            with open(self._expt_config["save_file"], 'wb') as f:
-                    export_file(pd.DataFrame(), f)
+        if self._expt_config["clear_save"] and os.path.isfile(self._expt_config["save_file"]):
+            self._log.warn("Clearing save file")
+            os.remove(self._expt_config["save_file"])
 
         self._log.warn("Reset experiment")
 
@@ -108,7 +107,12 @@ class Experiment():
 
         if self._expt_config["n_processes"] == 1:
             return self._run_single()
-        return self._run_multi()
+        else:
+            result_list = self._run_multi()
+            result = pd.DataFrame()
+            for r in result_list:
+                result = pd.concat([result, r])
+            return result
 
     def _run_single(self):
         """
@@ -117,11 +121,12 @@ class Experiment():
         :return: (pandas.DataFrame) data
         """
         self._log.warn("Run experiment in single thread")
-        results = []
+        results = pd.DataFrame()
         for trial in self.__n_iterable(self._trial_config, self._expt_config["n_trials"]):
             if self._expt_config["save_file"] is not None:
-                results.append(self._run_save(trial))
-            results.append(self._expt_config["experiment"](trial))
+                results = pd.concat([results, self._run_save(trial)])
+            else:
+                results = pd.concat([results, self._expt_config["experiment"](trial)])
         return results
 
     def _run_multi(self):
@@ -146,7 +151,7 @@ class Experiment():
         result = self._expt_config["experiment"](trial_config)
         with self.__lock:
             data = import_file(self._expt_config["save_file"])
-            pd.concat([data, result])
+            data = pd.concat([data, result])
             export_file(data,self._expt_config["save_file"])
         return result
 
@@ -170,6 +175,8 @@ def import_file(filepath):
     :return: (pandas.DataFrame) the imported dataframe
     """
     extension = filepath.split(".")[-1]
+    if not os.path.isfile(filepath):
+        return pd.DataFrame()
     if extension == "csv":
         return pd.read_csv(filepath)
     elif extension == "xlsx":
@@ -196,3 +203,18 @@ def export_file(df, filepath):
         df.to_json(filepath, index=False)
     else:
         raise ValueError(f"Unsupported file type: {extension}")
+
+def check_and_create_file(file_path):
+    file_extension = os.path.splitext(file_path)[1]
+    if not os.path.exists(file_path):
+        empty_df = pd.DataFrame()
+        if file_extension == '.csv':
+            empty_df.to_csv(file_path, index=False)
+        elif file_extension == '.json':
+            empty_df.to_json(file_path)
+        elif file_extension == '.xlsx':
+            empty_df.to_excel(file_path, index=False)
+        else:
+            return "Invalid file type"
+        return "Empty file created at: " + file_path
+    return "File already exists at: " + file_path

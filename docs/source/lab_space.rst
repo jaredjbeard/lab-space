@@ -4,11 +4,6 @@ Lab Space
 Subpackages
 -----------
 
-.. toctree::
-   :maxdepth: 4
-
-   lab_space.scripts
-
 Submodules
 ----------
 

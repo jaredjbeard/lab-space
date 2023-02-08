@@ -138,8 +138,7 @@ class Experiment():
 
         results = pd.DataFrame()
         with Pool(self._expt_config["n_processes"]) as p:
-            run_map = p.imap(self._expt_config["experiment"], self.__n_iterable(self._trial_config, self._expt_config["n_trials"]))
-            for result in run_map:
+            for result in p.imap(self._expt_config["experiment"], self.__n_iterable(self._trial_config, self._expt_config["n_trials"])):
                 if self._expt_config["save_file"] is not None:
                     self._save(result) 
                 results = pd.concat([results, result])

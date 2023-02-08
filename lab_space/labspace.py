@@ -136,7 +136,6 @@ if __name__=='__main__':
     parser.add_argument('-p',    '--print',            action="store_const", const=True,  help='Prints config file')
 
     args = parser.parse_args()
-    print(args)
     #########################################################################################
     # Configurations ------------------------------------------------------------------------
     with open(current + CORE_FILE_NAME, "rb") as f:
@@ -260,4 +259,4 @@ if __name__=='__main__':
         if expt_config["save_file"] is not None:
             expt_config["save_file"] = core_config["save_path"] + expt_config["save_file"]
         expt = Experiment(trial_config, expt_config, expt_config["log_level"])
-        expt.run()
+        print(expt.run())

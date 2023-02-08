@@ -1,4 +1,4 @@
-lab_space
+Lab Space
 =========
 
 .. toctree::

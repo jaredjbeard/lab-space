@@ -1,4 +1,4 @@
-Lab-Space
+Lab Space
 =========
 
 Subpackages

@@ -28,6 +28,8 @@ import importlib.util
 CORE_FILE_NAME = "/config/core/core.json"
 CORE_DEFAULT_FILE_NAME = "/config/core/core_default.json"
 
+__all__ = ['register_experiment', 'deregister_experiment', 'get_registered_experiment']
+
 def register_experiment(module_name :str, func_name : str = None, func_key_name : str = None, module_path : str = None):
     """
     Registers experiment to be run

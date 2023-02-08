@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lab-space"
-version = "0.0.4"
+version = "0.0.5"
 authors = [
   { name="Jared J. Beard", email="jbeard6@mix.wvu.edu" },
 ]
-description = "The purpose of this project is to provide an interface for nested dictionaries with unknown structures"
+description = "The purpose of this project is to provide a user friendly pipeline for defining and running experiments."
 readme = "README.md"
 requires-python = ">=3.7"
 classifiers = [

@@ -1,7 +1,0 @@
-sphinx==5.1.1
-sphinx-rtd-theme
-nestifydict==0.0.9
-toml
-pyyaml
-traitlets
--e.

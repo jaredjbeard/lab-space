@@ -18,6 +18,8 @@ from multiprocessing import Pool, Lock
 import logging
 import itertools
 import pandas as pd
+from reconfigurator.reconfigurator import compile_as_generator
+from copy import deepcopy
 
 import nestifydict as nd
 
@@ -164,9 +166,14 @@ class Experiment():
         :param n: (int) Number of copies
         :return: () n copies of the input sequences
         """
-        for element in itertools.repeat(iterable_el, n):
-            for el in element:
-                yield el
+        for i in range(n):
+            if isinstance(iterable_el, list):
+                for el in iterable_el:
+                    yield el
+            else:
+                els = deepcopy(iterable_el)
+                for el in compile_as_generator(els):
+                    yield el
 
 def import_file(filepath):
     """

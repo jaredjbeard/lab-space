@@ -25,7 +25,8 @@ from lab_space.old_analysis import Analysis
 CORE_FILE_NAME = "/config/core/core.json"
 CORE_DEFAULT_FILE_NAME = "/config/core/core_default.json"
 
-# cross ref and control should bin if there are too many. 
+# cross ref and control should bin if there are too many.
+# Support a list of data files 
 
 # MARKUP
 # Should support aliasing so we can compare variables of similar function

@@ -109,7 +109,7 @@ def call_function(module_name : str, func_name : str, module_path :str = None):
 
 if __name__=='__main__':
 
-    parser = argparse.ArgumentParser(description='Lab Space CLI')
+    parser = argparse.ArgumentParser(description='Lab Space Experiment CLI')
     parser.add_argument('-r',   '--run',           action="store_const", const=True,  help='Runs algorithm, if unspecified runs user default')
     
     parser.add_argument('-cr',  '--configure_reset',   action="store_const", const=True,  help='Resets all configuration to factory default')

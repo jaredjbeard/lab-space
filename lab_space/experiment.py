@@ -23,6 +23,7 @@ from copy import deepcopy
 
 import nestifydict as nd
 
+from file_utils import *
 
 class Experiment():
     """
@@ -173,55 +174,3 @@ class Experiment():
                 els = deepcopy(iterable_el)
                 for el in compile_as_generator(els):
                     yield el
-
-def import_file(filepath):
-    """
-    Import a file as a Pandas dataframe based on its file extension
-
-    :param filepath: (str) file path
-    :return: (pandas.DataFrame) the imported dataframe
-    """
-    extension = filepath.split(".")[-1]
-    if not os.path.isfile(filepath):
-        return pd.DataFrame()
-    if extension == "csv":
-        return pd.read_csv(filepath)
-    elif extension == "xlsx":
-        return pd.read_excel(filepath)
-    elif extension == "json":
-        return pd.read_json(filepath)
-    else:
-        raise ValueError(f"Unsupported file type: {extension}")
-
-def export_file(df, filepath):
-    """
-    Write a Pandas dataframe to a file based on its file extension
-
-    :param df: (pandas.DataFrame) the dataframe to be written
-    :param filepath: (str) file path
-    :return: None
-    """
-    extension = filepath.split(".")[-1]
-    if extension == "csv":
-        df.to_csv(filepath, index=False)
-    elif extension == "xlsx":
-        df.to_excel(filepath, index=False)
-    elif extension == "json":
-        df.to_json(filepath, index=False)
-    else:
-        raise ValueError(f"Unsupported file type: {extension}")
-
-def check_and_create_file(file_path):
-    file_extension = os.path.splitext(file_path)[1]
-    if not os.path.exists(file_path):
-        empty_df = pd.DataFrame()
-        if file_extension == '.csv':
-            empty_df.to_csv(file_path, index=False)
-        elif file_extension == '.json':
-            empty_df.to_json(file_path)
-        elif file_extension == '.xlsx':
-            empty_df.to_excel(file_path, index=False)
-        else:
-            return "Invalid file type"
-        return "Empty file created at: " + file_path
-    return "File already exists at: " + file_path

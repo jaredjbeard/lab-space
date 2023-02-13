@@ -6,13 +6,13 @@ if ! test -d "bin/"; then
     mkdir bin
 fi
 
-chmod +x labspace.py
+chmod +x $parent/labspace.py
 
 save_loc=bin/labspace
 if test -f "$save_loc"; then
     rm "$save_loc"
 fi
-ln -s ../labspace.py $save_loc
+ln -s $parent/labspace.py $save_loc
     
 export_path='export PATH="$PATH:parent/bin/"'
 export_path=${export_path/parent/$parent}

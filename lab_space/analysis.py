@@ -18,7 +18,7 @@ from multiprocessing import Pool, Lock
 import logging
 import itertools
 import pandas as pd
-from reconfigurator.reconfigurator import compile_as_generator
+from reconfigurator.compiler import compile_as_generator
 from copy import deepcopy
 
 import nestifydict as nd

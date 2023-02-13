@@ -68,7 +68,6 @@ Then these parameters can be saved using
 Adding CLI
 **********
 
-To add Lab Space command line interface in Linux, navigate to `/home/<user>/.local/lib/python<version#>/site-packages/lab-space/`.
-Then run `bash scripts/add_cli.bash`. This will add the reconfigurator CLI to your path. (in the future we may seek to add this at install time).
+To add Lab Space command line interface in Linux, run `bash /home/<user>/.local/lib/python<version#>/site-packages/lab-space/scripts/add_cli.bash`. This will add the reconfigurator CLI to your path. (in the future we may seek to add this at install time).
 
 The reconfigurator can be accessed using `labspace <flag> <args>`. Use `man labspace` for more information.

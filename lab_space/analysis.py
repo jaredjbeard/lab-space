@@ -106,13 +106,11 @@ class Analysis():
 
         data = import_file(self._analysis_config["data_file"])
 
-        data = self._get_analysis_cols(data)
+        data = self.filter_data(data)
 
         self._manip_data = self.cross_reference(data)
 
-        self._manip_data = self.split_dependence(self._manip_data)
-
-        # Extract relevant indep/dep variables
+        self._manip_data = self.split_data(self._manip_data)
 
         # split into control groups
 
@@ -122,22 +120,26 @@ class Analysis():
 
         # save
 
-    def _get_analysis_cols(self, data):
+    def filter_data(self, data):
         """
-        Extracts columns relevant to analysis
+        Filter a Pandas DataFrame based on specified values.
 
-        :param data: (pandas.DataFrame) Unfiltered data 
-        :return: (pandas.DataFrame) Data with relevant columns
+        :param data: (pd.DataFrame) Data to filter
+        :return: (pd.DataFrame) filtered data
         """
-        needed_cols = [self._analysis_config["cross_ref"], self._analysis_config["ind_var"], self._analysis_config["dep_var"], self._analysis_config["control_var"]]
-        for i, el in enumerate(needed_cols):
-            if isinstance(el,dict):
-                needed_cols[i] = el["var"]
-
-        # Add aliased vars to needed cols
-
-        return data[needed_cols]
-
+        if "include" in self._analysis_config["filter"]:
+            include_cols = self._analysis_config["filter"]["include"]
+            if isinstance(include_cols, (list, set)):
+                for col in include_cols:
+                    if col in data.columns:
+                        data = data[data[col].isin(include_cols)]
+        if "exclude" in self._analysis_config["filter"]:
+            exclude_cols = self._analysis_config["filter"]["exclude"]
+            if isinstance(exclude_cols, (list, set)):
+                for col in exclude_cols:
+                    if col in data.columns:
+                        data = data[~data[col].isin(exclude_cols)]
+        return data
     
     def cross_reference(self, data):
         """
@@ -154,20 +156,19 @@ class Analysis():
                 drop_nan = True
             return data.groupby(self._analysis_config["cross_ref"]["var"], dropna=drop_nan)
 
-    def split_dependence(self, data):
+    def split_data(self, grouped_data):
         """
-        Split data by dependent and independent variables
+        Split grouped data into corresponding data frames for each group.
 
-        :param data: (pandas.DataFrame) Data to split
-        :return: (pandas.DataFrame) Split data
+        :param grouped_data: (pd.core.groupby.GroupBy) Grouped data to split
+        :return: (dict) Dictionary mapping group keys to corresponding data frames
         """
-        if not isinstance(self._analysis_config["dep_var"], dict):
-            return data.groupby(self._analysis_config["dep_var"])
-        else:
-            drop_nan = False
-            if "drop_nan" in self._analysis_config["dep_var"] and self._analysis_config["dep_var"]["drop_nan"]:
-                drop_nan = True
-            return data.groupby(self._analysis_config["dep_var"]["var"], dropna=drop_nan)
+        dep_var = self._analysis_config["dep_var"]
+        indep_var = self._analysis_config["indep_var"]
+        result = {}
+        for group, data in grouped_data:
+            result[group] = pd.DataFrame(data={"dependent": data[dep_var], "independent": data[indep_var]})
+        return result
 
     def get_plot():
         pass

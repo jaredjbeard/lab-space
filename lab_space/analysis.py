@@ -120,6 +120,8 @@ class Analysis():
 
         # save
 
+        # let users pass in kwargs using dictionary to various pd functions
+
     def filter_data(self, data):
         """
         Filter a Pandas DataFrame based on specified values.

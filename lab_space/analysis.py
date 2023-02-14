@@ -21,28 +21,36 @@ import pandas as pd
 from reconfigurator.compiler import compile_as_generator
 from copy import deepcopy
 
+from file_utils import *
+
 import nestifydict as nd
 
 
-class Experiment():
+class Analysis():
     """
-    Perform trials for a given set of experiments. 
+    Analyses a set of data.
 
-    Users should provide two parameter files.
+    With regard to saving, in the <save_path> folder, analysis will add a folder for the given day and time. Within this, it will create the following files:
+        - <save_file>.csv: The data used for the analysis
+        - <save_file>.pkl: The figures from the analysis
+        - <save_file>.png: The figures from the analysis
+        - <save_file>.eps: The figures from the analysis
 
-    :param trial_config: (list(dict)/generator) Configurations for each trial, *default*: None
-    :param expt_config: (dict) Experiment configuration file containing the following keys:
-        - *default*: None
-        - "experiment": (func) Reference to function under test
-        - "n_trials": (int) Number of trials to run for each set of parameters, *default*: 1
-        - "n_processes": (int) Number of processes to use, *default*: 1
-        - "save_file": (str) file to save data, if none does not save, *default*: None
-        - "clear_save": (bool) clears data from pickle before running experiment, *default*: False
+    :param analysis_config: (dict) Analysis configuration containing the following keys:
+        - "data_file: (str) Path of data file (csv or xcls)
+        - "save_path": (str) Path to save figures to
+        - "save_file": (str) Path of save file (do not include extension, figures will be saved as .png, .eps, and .pkl)
+        - "type": (str) type of figures to generate (can be a list). options include line, contour
+        - "fig_params": (dict) Parameters for figure generation for each figure
+        - "cross_ref": (str) Name of column to cross reference data by (these are what you will see in the legends)
+        - "ind_var": (str) Name of column to use as independent variable
+        - "dep_var": (str) Name of column to use as dependent variable
+        - "control_var": (str) Name of column to use as control variable (this will generate subplots for each value, or if there are too many, will bin them)
     :param log_level: (str) Logging level, *default*: "WARNING"
     """
-    def __init__(self, trial_config = None, expt_config : dict = None, log_level : str = "WARNING"):
+    def __init__(self, analysis_config : dict = None, log_level : str = "WARNING"):
         
-        super(Experiment, self).__init__()
+        super(Analysis, self).__init__()
         
         log_levels = {"NOTSET": logging.NOTSET, "DEBUG": logging.DEBUG, "INFO": logging.INFO, "WARNING": logging.WARNING, "ERROR": logging.ERROR ,"CRITICAL": logging.CRITICAL}
         self._log_level = log_levels[log_level]
@@ -50,60 +58,116 @@ class Experiment():
         logging.basicConfig(stream=sys.stdout, format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s', level=self._log_level)
         self._log = logging.getLogger(__name__)
         
-        self._log.warn("RunExperiment Init, perform " + str(expt_config["n_trials"]) + " trials across " + str(expt_config["n_processes"]) + " processes")
+        self._log.warn("Analysis Init")
 
-        global expt_lock
-        expt_lock = Lock()
-        
-        self._trial_config = []
-        self._expt_config = {}
+        self._analysis_config = {}
 
-        self.reset(trial_config, expt_config)
+        self.reset(analysis_config)
         
-    def reset(self, trial_config = None, expt_config : dict = None):
+    def reset(self, analysis_config : dict = None):
         """
-        Reset experiment with new configurations
+        Reset analysis with new configurations
 
-        :param trial_config: (list(dict)/generator) Configurations for each trial, *default*: None
-        :param expt_config: (dict) Experiment configuration, *default*: None
+        :param analysis_config: (dict) Analysis configuration, *default*: None
         """
         
-        if trial_config is not None:
-            self._trial_config = trial_config
-        if expt_config is not None:
-            self._expt_config = nd.merge(self._expt_config, expt_config)
+        if analysis_config is not None:
+            self._analysis_config = nd.merge(self._analysis_config, analysis_config)
 
-        if "experiment" not in self._expt_config:
-            raise ValueError("Must provide experiment function")
-        if "n_trials" not in self._expt_config:
-            self._expt_config["n_trials"] = 1
-        if "n_processes" not in self._expt_config:
-            self._expt_config["n_processes"] = 1
-        if "save_file" not in self._expt_config:
-            self._expt_config["save_file"] = None
-        if "clear_save" not in self._expt_config:
-            self._expt_config["clear_save"] = False
-        if self._expt_config["clear_save"] and self._expt_config["save_file"] is not None and os.path.isfile(self._expt_config["save_file"]):
-            self._log.warn("Clearing save file")
-            os.remove(self._expt_config["save_file"])
+        if "data_file" not in self._expt_config or self._expt_config["data_file"] is None:
+            raise ValueError("Must provide data file")
+        if "save_file" not in self._expt_config or self._expt_config["save_file"] is None:
+            raise ValueError("Must provide save file")
+        if "save_path" not in self._expt_config or self._expt_config["save_path"] is None:
+            raise ValueError("Must provide save path")
+        if "type" not in self._expt_config or self._expt_config["type"] is None:
+            self._analysis_config["type"] = "line"
+        if "fig_params" not in self._expt_config or self._expt_config["fig_params"] is None:
+            self._analysis_config["fig_params"] = {}
+        if "cross_ref" not in self._expt_config:
+            raise ValueError("Must provide cross reference variable")
+        if "ind_var" not in self._expt_config or self._expt_config["ind_var"] is None:
+            raise ValueError("Must provide independent variable")   
+        if "dep_var" not in self._expt_config or self._expt_config["dep_var"] is None:
+            raise ValueError("Must provide dependent variable")
+        if "control_var" not in self._expt_config:
+            self._analysis_config["control_var"] = None
 
         self._log.warn("Reset experiment")
 
-    def run(self, trial_config = None, expt_config : dict = None):
+    def run(self, analysis_config : dict = None):
         """
-        Run experiment with new configurations
+        Run analysis
 
-        :param trial_config: (list(dict)/generator) Configurations for each trial, *default*: None
-        :param expt_config: (dict) Experiment configuration, *default*: None
-        :return: (pandas.DataFrame) data
+        :param analysis_config: (dict) Analysis configuration, *default*: None
         """
-        if trial_config is not None or expt_config is not None:
-            self.reset(trial_config, expt_config)
+        if analysis_config is not None:
+            self.reset(analysis_config)
 
-        if self._trial_config == []:
-            raise ValueError("Must provide trial configuration")
-        if self._expt_config["experiment"] == {}:
-            raise ValueError("Must provide experiment function")
+        data = import_file(self._analysis_config["data_file"])
+
+        data = self._get_analysis_cols(data)
+
+        self._manip_data = self.cross_reference(data)
+
+        self._manip_data = self.split_dependence(self._manip_data)
+
+        # Extract relevant indep/dep variables
+
+        # split into control groups
+
+        # Process data
+
+        # plot
+
+        # save
+
+    def _get_analysis_cols(self, data):
+        """
+        Extracts columns relevant to analysis
+
+        :param data: (pandas.DataFrame) Unfiltered data 
+        :return: (pandas.DataFrame) Data with relevant columns
+        """
+        needed_cols = [self._analysis_config["cross_ref"], self._analysis_config["ind_var"], self._analysis_config["dep_var"], self._analysis_config["control_var"]]
+        for i, el in enumerate(needed_cols):
+            if isinstance(el,dict):
+                needed_cols[i] = el["var"]
+
+        # Add aliased vars to needed cols
+
+        return data[needed_cols]
+
+    
+    def cross_reference(self, data):
+        """
+        Cross reference data by a given column
+
+        :param data: (pandas.DataFrame) Data to cross reference
+        :return: (pandas.DataFrame) Cross referenced data
+        """
+        if not isinstance(self._analysis_config["cross_ref"], dict):
+            return data.groupby(self._analysis_config["cross_ref"])
+        else:
+            drop_nan = False
+            if "drop_nan" in self._analysis_config["cross_ref"] and self._analysis_config["cross_ref"]["drop_nan"]:
+                drop_nan = True
+            return data.groupby(self._analysis_config["cross_ref"]["var"], dropna=drop_nan)
+
+    def split_dependence(self, data):
+        """
+        Split data by dependent and independent variables
+
+        :param data: (pandas.DataFrame) Data to split
+        :return: (pandas.DataFrame) Split data
+        """
+        if not isinstance(self._analysis_config["dep_var"], dict):
+            return data.groupby(self._analysis_config["dep_var"])
+        else:
+            drop_nan = False
+            if "drop_nan" in self._analysis_config["dep_var"] and self._analysis_config["dep_var"]["drop_nan"]:
+                drop_nan = True
+            return data.groupby(self._analysis_config["dep_var"]["var"], dropna=drop_nan)
 
     def get_plot():
         pass
@@ -112,55 +176,3 @@ class Experiment():
     def setup_subplots():
         pass
         #based on number of plots desired arranges subplots
-
-def import_file(filepath):
-    """
-    Import a file as a Pandas dataframe based on its file extension
-
-    :param filepath: (str) file path
-    :return: (pandas.DataFrame) the imported dataframe
-    """
-    extension = filepath.split(".")[-1]
-    if not os.path.isfile(filepath):
-        return pd.DataFrame()
-    if extension == "csv":
-        return pd.read_csv(filepath)
-    elif extension == "xlsx":
-        return pd.read_excel(filepath)
-    elif extension == "json":
-        return pd.read_json(filepath)
-    else:
-        raise ValueError(f"Unsupported file type: {extension}")
-
-def export_file(df, filepath):
-    """
-    Write a Pandas dataframe to a file based on its file extension
-
-    :param df: (pandas.DataFrame) the dataframe to be written
-    :param filepath: (str) file path
-    :return: None
-    """
-    extension = filepath.split(".")[-1]
-    if extension == "csv":
-        df.to_csv(filepath, index=False)
-    elif extension == "xlsx":
-        df.to_excel(filepath, index=False)
-    elif extension == "json":
-        df.to_json(filepath, index=False)
-    else:
-        raise ValueError(f"Unsupported file type: {extension}")
-
-def check_and_create_file(file_path):
-    file_extension = os.path.splitext(file_path)[1]
-    if not os.path.exists(file_path):
-        empty_df = pd.DataFrame()
-        if file_extension == '.csv':
-            empty_df.to_csv(file_path, index=False)
-        elif file_extension == '.json':
-            empty_df.to_json(file_path)
-        elif file_extension == '.xlsx':
-            empty_df.to_excel(file_path, index=False)
-        else:
-            return "Invalid file type"
-        return "Empty file created at: " + file_path
-    return "File already exists at: " + file_path

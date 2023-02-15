@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 """
 This script is handle command line argmuents for starting experiments and analyzing data.
 """

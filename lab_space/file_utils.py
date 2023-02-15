@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 """
 Functions for importing and exporting files.
 """

@@ -2,8 +2,9 @@
 
 parent=$(dirname $(dirname $(realpath $0)))
 
-if ! test -d "bin/"; then
-    mkdir bin
+bin_loc=$parent/bin
+if ! test -d "$bin_loc"; then
+    mkdir $bin_loc
 fi
 
 chmod +x $parent/labspace.py

@@ -117,7 +117,11 @@ class Analysis():
         data = filter_data(data, self._analysis_config["filter"])
 
         print(data)
-        # self._manip_data = self.cross_reference(data)
+
+        self._manip_data = self.cross_reference(data)
+
+        print(self._manip_data.groups)
+        print(self._manip_data.get_group("a"))
 
         # self._manip_data = self.split_data(self._manip_data)
 
@@ -152,6 +156,14 @@ class Analysis():
         :param data: (pandas.DataFrame) Data to cross reference
         :return: (pandas.DataFrame) Cross referenced data
         """
+
+        #if not dict, convert to dicitionary with name as key and list of data frames as "df"
+
+        # otherwise if names in dict, add these to names, else generate from conditions
+        # for each el in key (unless empty, then replace with all), then attempt to make data frame from col
+        # if col is a dict, then try filter data recursively to generate a data frame. 
+        # (may desire to remove shared values)
+
         if not isinstance(self._analysis_config["cross_ref"], dict):
             return data.groupby(self._analysis_config["cross_ref"])
         else:
@@ -174,13 +186,6 @@ class Analysis():
             result[group] = pd.DataFrame(data={"dependent": data[dep_var], "independent": data[indep_var]})
         return result
 
-    def get_plot():
-        pass
-    #gets plot type from string
-
-    def setup_subplots():
-        pass
-        #based on number of plots desired arranges subplots
 
 def filter_data(data, filter_config):
     """
@@ -215,7 +220,13 @@ def include_vals_filter(data, include_els):
             include_vals = data[col].unique()
         else:
             include_vals = include_els[col]
-        if col in data.columns:
+        if isinstance(include_vals, list):
+            if include_vals[0] == "":
+                include_vals[0] = data[col].min()
+            if include_vals[1] == "":
+                include_vals[1] = data[col].max()
+            temp_data = pd.concat([temp_data, data[data[col].between(include_vals[0], include_vals[1], inclusive=True)]])
+        else:
             temp_data = pd.concat([temp_data, data[data[col].isin(include_vals)]])
     return temp_data
 

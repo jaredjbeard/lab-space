@@ -25,8 +25,8 @@ if __name__ == "__main__":
             {
                 "shortcount" : [1]
             },
-            "include_cols" : [],
-            "exclude_cols" : None
+            "include_cols" : None,
+            "exclude_cols" : []
         }
     }
     a = Analysis(config)

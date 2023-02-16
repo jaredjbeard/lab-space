@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 """
 This script is handle command line argmuents for starting experiments and analyzing data.
 """
@@ -27,6 +27,8 @@ import importlib.util
 
 CORE_FILE_NAME = "/config/core/core.json"
 CORE_DEFAULT_FILE_NAME = "/config/core/core_default.json"
+
+__all__ = ['register_experiment', 'deregister_experiment', 'get_registered_experiment']
 
 def register_experiment(module_name :str, func_name : str = None, func_key_name : str = None, module_path : str = None):
     """
@@ -107,7 +109,7 @@ def call_function(module_name : str, func_name : str, module_path :str = None):
 
 if __name__=='__main__':
 
-    parser = argparse.ArgumentParser(description='Lab Space CLI')
+    parser = argparse.ArgumentParser(description='Lab Space Experiment CLI')
     parser.add_argument('-r',   '--run',           action="store_const", const=True,  help='Runs algorithm, if unspecified runs user default')
     
     parser.add_argument('-cr',  '--configure_reset',   action="store_const", const=True,  help='Resets all configuration to factory default')

@@ -74,28 +74,28 @@ class Analysis():
         if analysis_config is not None:
             self._analysis_config = nd.merge(self._analysis_config, analysis_config)
 
-        if "data_file" not in self._expt_config or self._expt_config["data_file"] is None:
+        if "data_file" not in self._analysis_config or self._analysis_config["data_file"] is None:
             raise ValueError("Must provide data file")
-        if "save_file" not in self._expt_config or self._expt_config["save_file"] is None:
+        if "save_file" not in self._analysis_config or self._analysis_config["save_file"] is None:
             raise ValueError("Must provide save file")
-        if "save_path" not in self._expt_config or self._expt_config["save_path"] is None:
+        if "save_path" not in self._analysis_config or self._analysis_config["save_path"] is None:
             raise ValueError("Must provide save path")
-        if "type" not in self._expt_config or self._expt_config["type"] is None:
+        if "type" not in self._analysis_config or self._analysis_config["type"] is None:
             self._analysis_config["type"] = "line"
-        if "fig_params" not in self._expt_config or self._expt_config["fig_params"] is None:
+        if "fig_params" not in self._analysis_config or self._analysis_config["fig_params"] is None:
             self._analysis_config["fig_params"] = {}
-        if "cross_ref" not in self._expt_config:
+        if "cross_ref" not in self._analysis_config:
             raise ValueError("Must provide cross reference variable")
-        if "ind_var" not in self._expt_config or self._expt_config["ind_var"] is None:
+        if "ind_var" not in self._analysis_config or self._analysis_config["ind_var"] is None:
             raise ValueError("Must provide independent variable")   
-        if "dep_var" not in self._expt_config or self._expt_config["dep_var"] is None:
+        if "dep_var" not in self._analysis_config or self._analysis_config["dep_var"] is None:
             raise ValueError("Must provide dependent variable")
-        if "control_var" not in self._expt_config:
+        if "control_var" not in self._analysis_config:
             self._analysis_config["control_var"] = None
 
         self._log.warn("Reset experiment")
 
-    def run(self, analysis_config : dict = None):
+    def analyze(self, analysis_config : dict = None):
         """
         Run analysis
 
@@ -106,11 +106,20 @@ class Analysis():
 
         data = import_file(self._analysis_config["data_file"])
 
-        data = self.filter_data(data)
+        if "filter" not in self._analysis_config:
+            self._analysis_config["filter"] = {}
+        if "include_cols" not in self._analysis_config["filter"]:
+            self._analysis_config["filter"]["include_cols"] = []
+        
+        if "rm_unused_cols" in self._analysis_config["filter"] and self._analysis_config["filter"]["rm_unused_cols"]:
+            self.rm_unused_cols()
+        
+        data = filter_data(data, self._analysis_config["filter"])
 
-        self._manip_data = self.cross_reference(data)
+        print(data)
+        # self._manip_data = self.cross_reference(data)
 
-        self._manip_data = self.split_data(self._manip_data)
+        # self._manip_data = self.split_data(self._manip_data)
 
         # split into control groups
 
@@ -122,27 +131,20 @@ class Analysis():
 
         # let users pass in kwargs using dictionary to various pd functions
 
-    def filter_data(self, data):
+    def rm_unused_cols(self):
         """
-        Filter a Pandas DataFrame based on specified values.
+        Remove unused columns from data
 
-        :param data: (pd.DataFrame) Data to filter
-        :return: (pd.DataFrame) filtered data
+        :param data: (pandas.DataFrame) Data to remove unused columns from
+        :return: (pandas.DataFrame) Data with unused columns removed
         """
-        if "include" in self._analysis_config["filter"]:
-            include_cols = self._analysis_config["filter"]["include"]
-            if isinstance(include_cols, (list, set)):
-                for col in include_cols:
-                    if col in data.columns:
-                        data = data[data[col].isin(include_cols)]
-        if "exclude" in self._analysis_config["filter"]:
-            exclude_cols = self._analysis_config["filter"]["exclude"]
-            if isinstance(exclude_cols, (list, set)):
-                for col in exclude_cols:
-                    if col in data.columns:
-                        data = data[~data[col].isin(exclude_cols)]
-        return data
-    
+        cols = [self._analysis_config["ind_var"], self._analysis_config["dep_var"]]
+        if self._analysis_config["cross_ref"] is not None:
+            cols.append(self._analysis_config["cross_ref"])
+        if self._analysis_config["control_var"] is not None:
+            cols.append(self._analysis_config["control_var"])
+        self._analysis_config["filter"]["include_cols"] += cols
+
     def cross_reference(self, data):
         """
         Cross reference data by a given column
@@ -179,3 +181,78 @@ class Analysis():
     def setup_subplots():
         pass
         #based on number of plots desired arranges subplots
+
+def filter_data(data, filter_config):
+    """
+    Filter a Pandas DataFrame based on specified values.
+
+    :param data: (pd.DataFrame) Data to filter
+    :param filter_config: (dict) Filter configuration containing the following keys:
+    :return: (pd.DataFrame) filtered data
+    """
+    if "include_cols" in filter_config and filter_config["include_cols"] is not None:
+        data = include_cols_filter(data, filter_config["include_cols"])
+    if "exclude_cols" in filter_config and filter_config["exclude_cols"] is not None:
+        data = exclude_cols_filter(data, filter_config["exclude_cols"])
+
+    if "include_vals" in filter_config and filter_config["include_vals"] is not None:
+        data = include_vals_filter(data, filter_config["include_vals"])
+    if "exclude_vals" in filter_config and filter_config["exclude_vals"] is not None:
+        data = exclude_vals_filter(data, filter_config["exclude_vals"])
+    return data
+
+def include_vals_filter(data, include_els):
+    """
+    Filter a Pandas DataFrame based on specified values.
+
+    :param data: (pd.DataFrame) Data to filter
+    :param include_els: (dict) Dictionary of columns and values to include
+    :return: (pd.DataFrame) filtered data
+    """
+    temp_data = pd.DataFrame()
+    for col in include_els.keys():
+        if include_els[col] == []:
+            include_vals = data[col].unique()
+        else:
+            include_vals = include_els[col]
+        if col in data.columns:
+            temp_data = pd.concat([temp_data, data[data[col].isin(include_vals)]])
+    return temp_data
+
+def exclude_vals_filter(data, exclude_els):
+    """
+    Filter a Pandas DataFrame based on specified values.
+
+    :param data: (pd.DataFrame) Data to filter
+    :param exclude_els: (dict) Dictionary of columns and values to exclude
+    :return: (pd.DataFrame) filtered data
+    """
+    temp_data = pd.DataFrame()
+    for col in exclude_els.keys():
+        if exclude_els[col] == []:
+            exclude_vals = data[col].unique()
+        else:
+            exclude_vals = exclude_els[col]
+        if col in data.columns:
+            temp_data = pd.concat([temp_data, data[~data[col].isin(exclude_vals)]])
+    return temp_data
+
+def include_cols_filter(data, include_cols):
+    """
+    Filter a Pandas DataFrame based on specified values.
+
+    :param data: (pd.DataFrame) Data to filter
+    :param include_cols: (list) List of columns to include
+    :return: (pd.DataFrame) filtered data
+    """
+    return data[include_cols]
+
+def exclude_cols_filter(data, exclude_cols):
+    """
+    Filter a Pandas DataFrame based on specified values.
+
+    :param data: (pd.DataFrame) Data to filter
+    :param exclude_cols: (list) List of columns to exclude
+    :return: (pd.DataFrame) filtered data
+    """
+    return data.drop(exclude_cols, axis=1)

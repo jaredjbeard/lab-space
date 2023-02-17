@@ -24,6 +24,7 @@ from copy import deepcopy
 from file_utils import *
 
 import nestifydict as nd
+from reconfigurator.compiler import compile_as_generator
 
 
 class Analysis():
@@ -106,6 +107,9 @@ class Analysis():
 
         data = import_file(self._analysis_config["data_file"])
 
+        if "logic_cols" in self._analysis_config:
+            data = self.apply_logic(data, self._analysis_config["logic_cols"])
+
         if "filter" not in self._analysis_config:
             self._analysis_config["filter"] = {}
         if "include_cols" not in self._analysis_config["filter"]:
@@ -120,8 +124,9 @@ class Analysis():
 
         self._manip_data = self.cross_reference(data)
 
-        print(self._manip_data.groups)
-        print(self._manip_data.get_group("a"))
+        for el in self._manip_data:
+            print("-----------------")
+            print(el)
 
         # self._manip_data = self.split_data(self._manip_data)
 
@@ -134,6 +139,18 @@ class Analysis():
         # save
 
         # let users pass in kwargs using dictionary to various pd functions
+
+    def apply_logic(self, data, logic_cols):
+        """
+        Apply logic to data
+
+        :param data: (pandas.DataFrame) Data to apply logic to
+        :param logic_cols: (dict) Dictionary of logic columns to apply
+        :return: (pandas.DataFrame) Data with logic applied
+        """
+        for conditions in logic_cols:
+            data[conditions] = evaluate_conditions(data, conditions)
+        return data
 
     def rm_unused_cols(self):
         """
@@ -164,13 +181,11 @@ class Analysis():
         # if col is a dict, then try filter data recursively to generate a data frame. 
         # (may desire to remove shared values)
 
-        if not isinstance(self._analysis_config["cross_ref"], dict):
-            return data.groupby(self._analysis_config["cross_ref"])
-        else:
-            drop_nan = False
-            if "drop_nan" in self._analysis_config["cross_ref"] and self._analysis_config["cross_ref"]["drop_nan"]:
-                drop_nan = True
-            return data.groupby(self._analysis_config["cross_ref"]["var"], dropna=drop_nan)
+        grouped_data = data.groupby(self._analysis_config["cross_ref"])
+        elements = []
+        for group in grouped_data.groups:
+            elements.append({"legend": group, "data": grouped_data.get_group(group)})
+        return elements
 
     def split_data(self, grouped_data):
         """
@@ -186,6 +201,54 @@ class Analysis():
             result[group] = pd.DataFrame(data={"dependent": data[dep_var], "independent": data[indep_var]})
         return result
 
+def evaluate_conditions(data, conditions):
+    """
+    Evaluate a list of conditions on a Pandas DataFrame.
+
+    :param data: (pd.DataFrame) Data to evaluate conditions on
+    :param conditions: (list) List of conditions to evaluate
+    :return: (pd.Series) Series of booleans indicating whether each row satisfies the conditions
+    """
+    result = [True]*len(data.index)
+    for condition in conditions:
+        result = result & evaluate_condition(data, condition)
+    return result
+
+def evaluate_condition(data, condition):
+    """
+    Evaluate a condition on a Pandas DataFrame.
+
+    :param data: (pd.DataFrame) Data to evaluate condition on
+    :param condition: (dict) Condition to evaluate
+    :return: (pd.Series) Series of booleans indicating whether each row satisfies the condition
+    """
+    if "col" not in condition:
+        raise ValueError("Must provide column to evaluate condition on")
+    if "op" not in condition:
+        raise ValueError("Must provide operation to evaluate condition")
+    if "val" not in condition:
+        raise ValueError("Must provide value to evaluate condition")
+    col = condition["col"]
+    op = condition["op"]
+    val = condition["val"]
+    if op == "eq":
+        return data[col] == val
+    elif op == "neq":
+        return data[col] != val
+    elif op == "lt":
+        return data[col] < val
+    elif op == "gt":
+        return data[col] > val
+    elif op == "lte":
+        return data[col] <= val
+    elif op == "gte":
+        return data[col] >= val
+    elif op == "in":
+        return data[col].isin(val)
+    elif op == "nin":
+        return ~data[col].isin(val)
+    else:
+        raise ValueError("Invalid operation")
 
 def filter_data(data, filter_config):
     """
@@ -225,7 +288,10 @@ def include_vals_filter(data, include_els):
                 include_vals[0] = data[col].min()
             if include_vals[1] == "":
                 include_vals[1] = data[col].max()
-            temp_data = pd.concat([temp_data, data[data[col].between(include_vals[0], include_vals[1], inclusive=True)]])
+            inclusive = True
+            if len(include_vals) > 2 and not include_vals[2]:
+                inclusive = False
+            temp_data = pd.concat([temp_data, data[data[col].between(include_vals[0], include_vals[1], inclusive=inclusive)]])
         else:
             temp_data = pd.concat([temp_data, data[data[col].isin(include_vals)]])
     return temp_data

@@ -14,6 +14,14 @@ if __name__ == "__main__":
         "ind_var" : "longcount",
         "dep_var" : "shortcount",
         "control_var" : None,
+        "logic_cols":
+        {
+            "name" : 
+            [
+                { "col" : <col_name>, "op" : <op>, "val" : <val>},
+                { "col" : <col_name>, "op" : <op>, "val" : <val>}
+            ]
+        },
         "filter" :
         {
             "rm_unused_cols" : False,
@@ -27,6 +35,14 @@ if __name__ == "__main__":
             },
             "include_cols" : None,
             "exclude_cols" : []
+        },
+        "fig":
+        {
+            "title" : "Test",
+            "xlabel" : "Long Count",
+            "ylabel" : "Short Count",
+            "legend" : True,
+            "legend_loc" : "upper left",
         }
     }
     a = Analysis(config)

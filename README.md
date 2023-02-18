@@ -1,4 +1,4 @@
-# reconfigurator
+# Lab-Space
 
 [![Downloads](https://static.pepy.tech/badge/lab-space)](https://pepy.tech/project/lab-space)
 

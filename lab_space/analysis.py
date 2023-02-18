@@ -222,6 +222,7 @@ def evaluate_condition(data, condition):
     :param condition: (dict) Condition to evaluate
     :return: (pd.Series) Series of booleans indicating whether each row satisfies the condition
     """
+    
     if "col" not in condition:
         raise ValueError("Must provide column to evaluate condition on")
     if "op" not in condition:

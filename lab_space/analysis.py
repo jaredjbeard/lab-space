@@ -105,9 +105,6 @@ class Analysis():
 
         data = import_file(self._analysis_config["data_file"])
 
-        if "logic_cols" in self._analysis_config:
-            data = self.apply_logic(data, self._analysis_config["logic_cols"])
-
         if "filter" not in self._analysis_config:
             self._analysis_config["filter"] = {}
         if "include_cols" not in self._analysis_config["filter"]:
@@ -138,18 +135,6 @@ class Analysis():
 
         # let users pass in kwargs using dictionary to various pd functions
 
-    def apply_logic(self, data, logic_cols):
-        """
-        Apply logic to data
-
-        :param data: (pandas.DataFrame) Data to apply logic to
-        :param logic_cols: (dict) Dictionary of logic columns to apply
-        :return: (pandas.DataFrame) Data with logic applied
-        """
-        for conditions in logic_cols:
-            data[conditions] = evaluate_conditions(data, conditions)
-        return data
-
     def rm_unused_cols(self):
         """
         Remove unused columns from data
@@ -164,7 +149,7 @@ class Analysis():
             cols.append(self._analysis_config["control_var"])
         self._analysis_config["filter"]["include_cols"] += cols
 
-    def cross_reference(self, data):
+    def cross_reference(self, data : pd.DataFrame):
         """
         Cross reference data by a given column
 
@@ -185,7 +170,7 @@ class Analysis():
             elements.append({"legend": group, "data": grouped_data.get_group(group)})
         return elements
 
-    def split_data(self, grouped_data):
+    def split_data(self, grouped_data : pd.core.groupby.GroupBy):
         """
         Split grouped data into corresponding data frames for each group.
 
@@ -199,20 +184,66 @@ class Analysis():
             result[group] = pd.DataFrame(data={"dependent": data[dep_var], "independent": data[indep_var]})
         return result
 
-def evaluate_conditions(data, conditions):
+def filter_data(data : pd.DataFrame, filter_config : dict):
     """
-    Evaluate a list of conditions on a Pandas DataFrame.
+    Filter a Pandas DataFrame based on specified values.
 
-    :param data: (pd.DataFrame) Data to evaluate conditions on
-    :param conditions: (list) List of conditions to evaluate
+    :param data: (pd.DataFrame) Data to filter
+    :param filter_config: (dict) Filter configuration containing the following keys:
+    :return: (pd.DataFrame) filtered data
+    """
+    if "include_cols" in filter_config and filter_config["include_cols"] is not None:
+        data = include_cols_filter(data, filter_config["include_cols"])
+    if "exclude_cols" in filter_config and filter_config["exclude_cols"] is not None:
+        data = exclude_cols_filter(data, filter_config["exclude_cols"])
+    if "logic" in filter_config and filter_config["logic"] is not None:
+        return data[data_logic(data, filter_config["logic"])]
+    return data
+
+def data_logic(data : pd.DataFrame, logic_ops : dict):
+    """
+    Performs logical operations on columns
+    
+    :param data: (pd.DataFrame) Data to filter
+    :param logic_ops: (dict) Dict of logical operations to perform
     :return: (pd.Series) Series of booleans indicating whether each row satisfies the conditions
     """
-    result = [True]*len(data.index)
-    for condition in conditions:
-        result = result & evaluate_condition(data, condition)
-    return result
+    if "and" in logic_ops:
+        return logic_and(data, logic_ops["and"])
+    elif "or" in logic_ops:
+        return logic_or(data, logic_ops["or"])
+    elif "col" in logic_ops:
+        return logic_operation(data, logic_ops)
+    else:
+        raise ValueError("Invalid filter element")    
 
-def evaluate_condition(data, condition):
+def logic_and(data : pd.DataFrame, conditions : list):
+    """
+    Filter a Pandas DataFrame based on specified values.
+    
+    :param data: (pd.DataFrame) Data to filter
+    :param conditions: (dict) Filter configuration containing the following keys:
+    :return: (pd.DataFrame) filtered data
+    """
+    logic_out = pd.Series([True]*len(data.index))
+    for cond in conditions:
+        logic_out = logic_out & data_logic(data, cond)
+    return logic_out
+
+def logic_or(data : pd.DataFrame,conditions : list):
+    """
+    Filter a Pandas DataFrame based on specified values.
+    
+    :param data: (pd.DataFrame) Data to filter
+    :paramconditions: (dict) Filter configuration containing the following keys:
+    :return: (pd.DataFrame) filtered data
+    """
+    logic_out = pd.Series([False]*len(data.index))
+    for cond in conditions:
+        logic_out = logic_out | data_logic(data, cond)
+    return logic_out
+
+def logic_operation(data : pd.DataFrame, condition : dict):
     """
     Evaluate a condition on a Pandas DataFrame.
 
@@ -252,80 +283,8 @@ def evaluate_condition(data, condition):
         return ~data[col].isin(val)
     else:
         raise ValueError("Invalid operation")
-
-def filter_data(data, filter_config):
-    """
-    Filter a Pandas DataFrame based on specified values.
-
-    :param data: (pd.DataFrame) Data to filter
-    :param filter_config: (dict) Filter configuration containing the following keys:
-    :return: (pd.DataFrame) filtered data
-    """
-    if "include_cols" in filter_config and filter_config["include_cols"] is not None:
-        data = include_cols_filter(data, filter_config["include_cols"])
-    if "exclude_cols" in filter_config and filter_config["exclude_cols"] is not None:
-        data = exclude_cols_filter(data, filter_config["exclude_cols"])
-        
-    filter_vals = [True]*len(data.index)
-    for el in filter_config["logic"]:
-        if isinstance(el, dict):
-            filter_vals = filter_vals & evaluate_condition(data, el)
-        elif isinstance(el, list) and len(el) > 0:
-            temp_vals = [False]*len(data.index)
-            for condition in el:
-                temp_vals = temp_vals | evaluate_condition(data, condition)
-            filter_vals = filter_vals & temp_vals
-        elif not isinstance(el, list):
-            raise ValueError("Invalid filter element")
-        
-    return data[filter_vals]
-
-def include_vals_filter(data, include_els):
-    """
-    Filter a Pandas DataFrame based on specified values.
-
-    :param data: (pd.DataFrame) Data to filter
-    :param include_els: (dict) Dictionary of columns and values to include
-    :return: (pd.DataFrame) filtered data
-    """
-    temp_data = pd.DataFrame()
-    for col in include_els.keys():
-        if include_els[col] == []:
-            include_vals = data[col].unique()
-        else:
-            include_vals = include_els[col]
-        if isinstance(include_vals, list):
-            if include_vals[0] == "":
-                include_vals[0] = data[col].min()
-            if include_vals[1] == "":
-                include_vals[1] = data[col].max()
-            inclusive = True
-            if len(include_vals) > 2 and not include_vals[2]:
-                inclusive = False
-            temp_data = pd.concat([temp_data, data[data[col].between(include_vals[0], include_vals[1], inclusive=inclusive)]])
-        else:
-            temp_data = pd.concat([temp_data, data[data[col].isin(include_vals)]])
-    return temp_data
-
-def exclude_vals_filter(data, exclude_els):
-    """
-    Filter a Pandas DataFrame based on specified values.
-
-    :param data: (pd.DataFrame) Data to filter
-    :param exclude_els: (dict) Dictionary of columns and values to exclude
-    :return: (pd.DataFrame) filtered data
-    """
-    temp_data = pd.DataFrame()
-    for col in exclude_els.keys():
-        if exclude_els[col] == []:
-            exclude_vals = data[col].unique()
-        else:
-            exclude_vals = exclude_els[col]
-        if col in data.columns:
-            temp_data = pd.concat([temp_data, data[~data[col].isin(exclude_vals)]])
-    return temp_data
-
-def include_cols_filter(data, include_cols):
+    
+def include_cols_filter(data : pd.DataFrame, include_cols : list):
     """
     Filter a Pandas DataFrame based on specified values.
 
@@ -335,7 +294,7 @@ def include_cols_filter(data, include_cols):
     """
     return data[include_cols]
 
-def exclude_cols_filter(data, exclude_cols):
+def exclude_cols_filter(data : pd.Dataframe, exclude_cols : list):
     """
     Filter a Pandas DataFrame based on specified values.
 

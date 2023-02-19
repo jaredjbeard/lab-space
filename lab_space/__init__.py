@@ -1,5 +1,5 @@
 from . import labspace
 from . import experiment
 from . import analysis
-from . import analysisspace
+from . import dataspace
 from . import file_utils

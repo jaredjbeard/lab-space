@@ -24,8 +24,6 @@ from copy import deepcopy
 from file_utils import *
 
 import nestifydict as nd
-from reconfigurator.compiler import compile_as_generator
-
 
 class Analysis():
     """
@@ -124,9 +122,9 @@ class Analysis():
 
         self._manip_data = self.cross_reference(data)
 
-        for el in self._manip_data:
-            print("-----------------")
-            print(el)
+        # for el in self._manip_data:
+        #     print("-----------------")
+        #     print(el)
 
         # self._manip_data = self.split_data(self._manip_data)
 
@@ -232,21 +230,25 @@ def evaluate_condition(data, condition):
     col = condition["col"]
     op = condition["op"]
     val = condition["val"]
-    if op == "eq":
+    if op == "=":
         return data[col] == val
-    elif op == "neq":
+    elif op == "!=":
         return data[col] != val
-    elif op == "lt":
+    elif op == "<":
         return data[col] < val
-    elif op == "gt":
+    elif op == ">":
         return data[col] > val
-    elif op == "lte":
+    elif op == "<=":
         return data[col] <= val
-    elif op == "gte":
+    elif op == ">=":
         return data[col] >= val
     elif op == "in":
+        if not isinstance(val, list):
+            val = [val]
         return data[col].isin(val)
     elif op == "nin":
+        if not isinstance(val, list):
+            val = [val]
         return ~data[col].isin(val)
     else:
         raise ValueError("Invalid operation")
@@ -263,12 +265,20 @@ def filter_data(data, filter_config):
         data = include_cols_filter(data, filter_config["include_cols"])
     if "exclude_cols" in filter_config and filter_config["exclude_cols"] is not None:
         data = exclude_cols_filter(data, filter_config["exclude_cols"])
-
-    if "include_vals" in filter_config and filter_config["include_vals"] is not None:
-        data = include_vals_filter(data, filter_config["include_vals"])
-    if "exclude_vals" in filter_config and filter_config["exclude_vals"] is not None:
-        data = exclude_vals_filter(data, filter_config["exclude_vals"])
-    return data
+        
+    filter_vals = [True]*len(data.index)
+    for el in filter_config["logic"]:
+        if isinstance(el, dict):
+            filter_vals = filter_vals & evaluate_condition(data, el)
+        elif isinstance(el, list) and len(el) > 0:
+            temp_vals = [False]*len(data.index)
+            for condition in el:
+                temp_vals = temp_vals | evaluate_condition(data, condition)
+            filter_vals = filter_vals & temp_vals
+        elif not isinstance(el, list):
+            raise ValueError("Invalid filter element")
+        
+    return data[filter_vals]
 
 def include_vals_filter(data, include_els):
     """

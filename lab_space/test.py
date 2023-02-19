@@ -14,25 +14,23 @@ if __name__ == "__main__":
         "ind_var" : "longcount",
         "dep_var" : "shortcount",
         "control_var" : None,
-        "logic_cols":
+        "merge_cols":
         {
-            "name" : 
-            [
-                { "col" : <col_name>, "op" : <op>, "val" : <val>},
-                { "col" : <col_name>, "op" : <op>, "val" : <val>}
-            ]
+          "param": ["alpha", "c"]      
         },
         "filter" :
         {
             "rm_unused_cols" : False,
-            "include_vals" : 
-            {
-                "letter" : ["a", "b"]
-            },
-            "exclude_vals" :
-            {
-                "shortcount" : [1]
-            },
+            "logic" : 
+            [
+                {"col" : "letter", "op" : "in", "val" : "a"},
+                # {"col" : "word", "op" : "nin", "val" : ["bee"]},
+                [
+                    # {"col" : "letter", "op" : "in", "val" : "a"},
+                    # {"col" : "word", "op" : "in", "val" : ["bee"]},
+                ]
+              
+            ],
             "include_cols" : None,
             "exclude_cols" : []
         },

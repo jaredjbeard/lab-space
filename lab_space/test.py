@@ -22,15 +22,21 @@ if __name__ == "__main__":
         {
             "rm_unused_cols" : False,
             "logic" : 
-            [
-                {"col" : "letter", "op" : "in", "val" : "a"},
-                # {"col" : "word", "op" : "nin", "val" : ["bee"]},
+            {   
+                "and":
                 [
-                    # {"col" : "letter", "op" : "in", "val" : "a"},
-                    # {"col" : "word", "op" : "in", "val" : ["bee"]},
+                    {"col" : "letter", "op" : "in", "val" : "a"},
+                    # {"col" : "word", "op" : "nin", "val" : ["bee"]},
+                    {
+                        "or":
+                        [
+                            {"col" : "longcount", "op" : "in", "val" : [0,4]},
+                            {"col" : "word", "op" : "in", "val" : ["bee"]},
+                        ]
+                    }
+                
                 ]
-              
-            ],
+            },
             "include_cols" : None,
             "exclude_cols" : []
         },

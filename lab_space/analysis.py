@@ -226,6 +226,8 @@ def logic_and(data : pd.DataFrame, conditions : list):
     :return: (pd.DataFrame) filtered data
     """
     logic_out = pd.Series([True]*len(data.index))
+    if len(conditions) == 0:
+        return logic_out
     for cond in conditions:
         logic_out = logic_out & data_logic(data, cond)
     return logic_out
@@ -238,6 +240,8 @@ def logic_or(data : pd.DataFrame,conditions : list):
     :paramconditions: (dict) Filter configuration containing the following keys:
     :return: (pd.DataFrame) filtered data
     """
+    if len(conditions) == 0:
+        return pd.Series([True]*len(data.index))
     logic_out = pd.Series([False]*len(data.index))
     for cond in conditions:
         logic_out = logic_out | data_logic(data, cond)
@@ -294,7 +298,7 @@ def include_cols_filter(data : pd.DataFrame, include_cols : list):
     """
     return data[include_cols]
 
-def exclude_cols_filter(data : pd.Dataframe, exclude_cols : list):
+def exclude_cols_filter(data : pd.DataFrame, exclude_cols : list):
     """
     Filter a Pandas DataFrame based on specified values.
 

@@ -17,6 +17,7 @@ sys.path.append(parent)
 from multiprocessing import Pool, Lock
 import logging
 import itertools
+import numpy as np
 import pandas as pd
 from reconfigurator.compiler import compile_as_generator
 from copy import deepcopy
@@ -104,6 +105,9 @@ class Analysis():
             self.reset(analysis_config)
 
         data = import_file(self._analysis_config["data_file"])
+        
+        if "merge_cols" in self._analysis_config:
+            data = merge_cols(data, self._analysis_config["merge_cols"])
 
         if "filter" not in self._analysis_config:
             self._analysis_config["filter"] = {}
@@ -163,12 +167,17 @@ class Analysis():
         # for each el in key (unless empty, then replace with all), then attempt to make data frame from col
         # if col is a dict, then try filter data recursively to generate a data frame. 
         # (may desire to remove shared values)
-
-        grouped_data = data.groupby(self._analysis_config["cross_ref"])
-        elements = []
-        for group in grouped_data.groups:
-            elements.append({"legend": group, "data": grouped_data.get_group(group)})
-        return elements
+        if not isinstance(self._analysis_config["cross_ref"], dict):
+            grouped_data = data.groupby(self._analysis_config["cross_ref"])
+            elements = []
+            for group in grouped_data.groups:
+                print(type(grouped_data.get_group(group)))
+                elements.append({"legend": group, "data": grouped_data.get_group(group)})
+            return elements
+        else:
+            elements = []
+            for name, logic in zip(self._analysis_config["cross_ref"]["name"], self._analysis_config["logic"]):
+                elements.append({"legend": name, "data": data[data_logic(data, logic)]})
 
     def split_data(self, grouped_data : pd.core.groupby.GroupBy):
         """
@@ -183,6 +192,22 @@ class Analysis():
         for group, data in grouped_data:
             result[group] = pd.DataFrame(data={"dependent": data[dep_var], "independent": data[indep_var]})
         return result
+
+def merge_cols(data : pd.DataFrame, merge_cols : dict):
+    """_
+    Merge columns in a Pandas DataFrame (assumes values do not intersect).
+    
+    :param data: (pd.DataFrame) Data to merge columns in
+    :param merge_cols: (dict) Dictionary mapping column names to columns to merge with
+    :return: (pd.DataFrame) Data with columns merged
+    """
+    for el in merge_cols:
+        data[el] = np.nan
+        for i in range(len(data.index)):
+            for col in merge_cols[el]:
+                if data[col][i].notnull():
+                    data[el][i] = data[col][i]
+    return data
 
 def filter_data(data : pd.DataFrame, filter_config : dict):
     """

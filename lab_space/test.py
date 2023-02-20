@@ -22,13 +22,11 @@ if __name__ == "__main__":
         {
             "rm_unused_cols" : False,
             "logic" : 
-            {   
-                "and":
+            {   "and":
                 [
                     {"col" : "letter", "op" : "in", "val" : "a"},
                     # {"col" : "word", "op" : "nin", "val" : ["bee"]},
-                    {
-                        "or":
+                    {   "or":
                         [
                             {"col" : "longcount", "op" : "in", "val" : [0,4]},
                             {"col" : "word", "op" : "in", "val" : ["bee"]},

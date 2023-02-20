@@ -11,30 +11,39 @@ if __name__ == "__main__":
         "type" : "line",
         "fig_params" : {},
         "cross_ref" : "letter",
-        "ind_var" : "longcount",
-        "dep_var" : "shortcount",
+        "x" : "longcount",
+        "y" : "shortcount",
+        "z" : None,
         "control_var" : None,
+        "control_kwargs": 
+        {
+            "bins" : 
+            { 
+                "size": None,
+                "bins": None # if a list, then the bins to use
+            }    
+        },
         "merge_cols":
         {
-          "param": ["alpha", "c"]      
+        #   "param": ["alpha", "c"]      
         },
         "filter" :
         {
             "rm_unused_cols" : False,
-            "logic" : 
-            {   "and":
-                [
-                    {"col" : "letter", "op" : "in", "val" : "a"},
-                    # {"col" : "word", "op" : "nin", "val" : ["bee"]},
-                    {   "or":
-                        [
-                            {"col" : "longcount", "op" : "in", "val" : [0,4]},
-                            {"col" : "word", "op" : "in", "val" : ["bee"]},
-                        ]
-                    }
+            # "logic" : 
+            # {   "and":
+            #     [
+            #         {"col" : "letter", "op" : "in", "val" : "a"},
+            #         # {"col" : "word", "op" : "nin", "val" : ["bee"]},
+            #         {   "or":
+            #             [
+            #                 {"col" : "longcount", "op" : "in", "val" : [0,4]},
+            #                 {"col" : "word", "op" : "in", "val" : ["bee"]},
+            #             ]
+            #         }
                 
-                ]
-            },
+            #     ]
+            # },
             "include_cols" : None,
             "exclude_cols" : []
         },
@@ -45,6 +54,14 @@ if __name__ == "__main__":
             "ylabel" : "Short Count",
             "legend" : True,
             "legend_loc" : "upper left",
+            "kwargs" : {},
+            "controls":
+            {   
+                "smooth" : None, # number of els to smooth over
+                "sort": 1, # 0 = no sort, 1 = sort, -1 =  reverse sort
+                "avg": 1 # 0 = no avg, 1 = avg, 2 = median, 3 = mode
+                
+            }
         }
     }
     a = Analysis(config)

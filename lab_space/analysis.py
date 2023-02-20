@@ -43,8 +43,8 @@ class Analysis():
         - "type": (str) type of figures to generate (can be a list). options include line, contour
         - "fig_params": (dict) Parameters for figure generation for each figure
         - "cross_ref": (str) Name of column to cross reference data by (these are what you will see in the legends)
-        - "ind_var": (str) Name of column to use as independent variable
-        - "dep_var": (str) Name of column to use as dependent variable
+        - "x": (str) Name of column to use as independent variable
+        - "y": (str) Name of column to use as dependent variable
         - "control_var": (str) Name of column to use as control variable (this will generate subplots for each value, or if there are too many, will bin them)
     :param log_level: (str) Logging level, *default*: "WARNING"
     """
@@ -86,9 +86,9 @@ class Analysis():
             self._analysis_config["fig_params"] = {}
         if "cross_ref" not in self._analysis_config:
             raise ValueError("Must provide cross reference variable")
-        if "ind_var" not in self._analysis_config or self._analysis_config["ind_var"] is None:
+        if "x" not in self._analysis_config or self._analysis_config["x"] is None:
             raise ValueError("Must provide independent variable")   
-        if "dep_var" not in self._analysis_config or self._analysis_config["dep_var"] is None:
+        if "y" not in self._analysis_config or self._analysis_config["y"] is None:
             raise ValueError("Must provide dependent variable")
         if "control_var" not in self._analysis_config:
             self._analysis_config["control_var"] = None
@@ -121,18 +121,25 @@ class Analysis():
 
         print(data)
 
-        self._manip_data = self.cross_reference(data)
+        cr_data = self.cross_reference(data)
+        
+        for el in cr_data:
+            print("-----------------")
+            print(el["legend"])
+            print(el["data"])
+            
+        self.compile_bins(cr_data)
 
-        # for el in self._manip_data:
-        #     print("-----------------")
-        #     print(el)
-
-        # self._manip_data = self.split_data(self._manip_data)
-
-        # split into control groups
-
-        # Process data
-
+        split_data = self.split_data(cr_data)
+        
+        print("-----Plot Data-----")
+        for el in split_data:
+            print("-----------------")
+            print(split_data[el])
+            
+        # plt_data = self.plot(split_data)
+        
+        # self.save(plt_data)
         # plot
 
         # save
@@ -146,7 +153,7 @@ class Analysis():
         :param data: (pandas.DataFrame) Data to remove unused columns from
         :return: (pandas.DataFrame) Data with unused columns removed
         """
-        cols = [self._analysis_config["ind_var"], self._analysis_config["dep_var"]]
+        cols = [self._analysis_config["x"], self._analysis_config["y"]]
         if self._analysis_config["cross_ref"] is not None:
             cols.append(self._analysis_config["cross_ref"])
         if self._analysis_config["control_var"] is not None:
@@ -171,7 +178,6 @@ class Analysis():
             grouped_data = data.groupby(self._analysis_config["cross_ref"])
             elements = []
             for group in grouped_data.groups:
-                print(type(grouped_data.get_group(group)))
                 elements.append({"legend": group, "data": grouped_data.get_group(group)})
             return elements
         else:
@@ -179,20 +185,113 @@ class Analysis():
             for name, logic in zip(self._analysis_config["cross_ref"]["name"], self._analysis_config["logic"]):
                 elements.append({"legend": name, "data": data[data_logic(data, logic)]})
 
-    def split_data(self, grouped_data : pd.core.groupby.GroupBy):
+    def split_data(self, grouped_data : list):
         """
         Split grouped data into corresponding data frames for each group.
 
-        :param grouped_data: (pd.core.groupby.GroupBy) Grouped data to split
-        :return: (dict) Dictionary mapping group keys to corresponding data frames
+        :param grouped_data: (list) Grouped data to split
+        :return: (dict) List of dictionaries containing legend and data
         """
-        dep_var = self._analysis_config["dep_var"]
-        indep_var = self._analysis_config["indep_var"]
-        result = {}
-        for group, data in grouped_data:
-            result[group] = pd.DataFrame(data={"dependent": data[dep_var], "independent": data[indep_var]})
-        return result
+        if "z" not in self._analysis_config:
+            self._analysis_config["z"] = None
+        
+        plot_data = {"plot": ["all"], "data": []}
+        split_data = []
+        
+        for el in grouped_data:
+            include_cols = [ self._analysis_config["x"], self._analysis_config["y"]]
+            if self._analysis_config["z"] is not None:
+                include_cols.append(self._analysis_config["z"])
+            temp = {"legend": el["legend"], "data": include_cols_filter(el["data"], include_cols)}
+            split_data.append(temp)
+                
+        plot_data["data"].append(split_data)
+        
+        if self._analysis_config["control_var"] is not None:      
+            for name, bin in zip(self._analysis_config["control_kwargs"]["names"], self._analysis_config["control_kwargs"]["bins"]):
+                temp_data = []
+                for el in split_data:
+                    temp_data.append(data_logic(el["data"], bin))
+                plot_data["plot"].append(name)
+                plot_data["data"].append(temp_data)
+        
+        return plot_data
+    
+    def compile_bins(self, data : pd.DataFrame):
+        """
+        Compile bins for control variable from markup specification
+        
+        :param data: (pandas.DataFrame) Data to compile bins from
+        """
+        if "control_var" not in self._analysis_config:
+            self._analysis_config["control_var"] = None
+        if self._analysis_config["control_var"] is not None:
+            if "control_kwargs" not in self._analysis_config:
+                self._analysis_config["control_kwargs"] = {}
+            if "bins" in self._analysis_config["control_kwargs"]:
+                self._analysis_config["control_kwargs"]["bins"] = self._analysis_config["control_kwargs"]["bins"]
+            bin_names, control_bins = bin_control(data, self._analysis_config["control_var"], self._analysis_config["control_kwargs"]["bins"])
+            self._analysis_config["control_kwargs"] = {"names": bin_names, "bins": control_bins}
+    
+def bin_control(data : pd.DataFrame, control_var : str, bins : dict = {}):
+    """
+    Bin control variable data.
 
+    :param data: (pd.DataFrame) Data to bin
+    :param control_var: (str) Name of control variable
+    :param bins: (dict) How to bin data
+    :return: (list) List of dictionaries containing legend and data
+    """
+    if "bins" in bins and isinstance(bins["bins"], list):
+        bin_vals = bins["bins"]
+    elif "bins" in bins and isinstance(bins["bins"], int):
+        bin_min = data[control_var].min()
+        bin_max = data[control_var].max()
+        bin_vals = np.linspace(bin_min, bin_max, bins["bins"]+1)
+    elif "size" in bins:
+        bin_vals = [data[control_var].min()]
+        while bin_vals[-1] < data[control_var].max():
+            bin_vals.append(bin_vals[-1] + bins["size"])
+    else:
+        bin_vals = list(data[control_var].unique())
+    
+    bin_names = []
+    if "labels" in bins:
+        bin_names = bins["labels"]
+    
+    control_bins = []
+    if isinstance(bin_vals[i], str) or bins == {}:
+        for i in range(len(bin_vals)):
+            bin_names.append(control_var + " " + str(bin_vals[i]))
+            control_bins.append({"col":control_var, "op": "=", "val": bin_vals[i]}) 
+    else:
+        for i in range(len(bins)-1):
+            if i == 0:
+                bin_names.append(control_var + "[ " + str(bin_vals[i]) + ", " + str(bin_vals[i+1]) + "]")
+                control_bins.append({"and": 
+                    [{"col":control_var, "op": ">=", "val": bin_vals[i]}, 
+                     {"col":control_var, "op": "=<", "val": bin_vals[i+1]}
+                    ]})
+            else:
+                bin_names.append(control_var + "( " + str(bin_vals[i]) + ", " + str(bin_vals[i+1]) + "]")
+                control_bins.append({"and": 
+                    [{"col":control_var, "op": ">", "val": bin_vals[i]}, 
+                     {"col":control_var, "op": "=<", "val": bin_vals[i+1]}
+                    ]})
+    return bin_names, control_bins
+
+def package_data(data : dict, x : str, y : str, z : str = None):
+    """
+    Package data into a list of dictionaries containing x, y, and z data.
+
+    :param data: (dict) Data to package
+    :param x: (str) Name of x column
+    :param y: (str) Name of y column
+    :param z: (str) Name of z column
+    :return: (list) List of dictionaries containing x, y, and z data
+    """
+    return {"legend": data["legend"], "x": data[x], "y": data[y], "z": data[z] if z is not None else None}
+    
 def merge_cols(data : pd.DataFrame, merge_cols : dict):
     """_
     Merge columns in a Pandas DataFrame (assumes values do not intersect).

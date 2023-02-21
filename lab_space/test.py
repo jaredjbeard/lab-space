@@ -8,7 +8,6 @@ if __name__ == "__main__":
         "data_file" : "/home/jared/lab-space/lab_space/results/data.csv",
         "save_file" : "save.csv",
         "save_path" : "save/",
-        "type" : "line",
         "fig_params" : {},
         "cross_ref" : "letter",
         "x" : "longcount",
@@ -49,6 +48,7 @@ if __name__ == "__main__":
         },
         "fig":
         {
+            "type" : "line",
             "title" : "Test",
             "xlabel" : "Long Count",
             "ylabel" : "Short Count",

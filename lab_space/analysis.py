@@ -19,6 +19,8 @@ import logging
 import itertools
 import numpy as np
 import pandas as pd
+import pickle as pkl
+import matplotlib.pyplot as plt
 from reconfigurator.compiler import compile_as_generator
 from copy import deepcopy
 
@@ -136,8 +138,9 @@ class Analysis():
         for el in split_data:
             print("-----------------")
             print(split_data[el])
-            
-        # plt_data = self.plot(split_data)
+        
+        
+        plt_data = self.plot(split_data)
         
         # self.save(plt_data)
         # plot
@@ -232,6 +235,89 @@ class Analysis():
                 self._analysis_config["control_kwargs"]["bins"] = self._analysis_config["control_kwargs"]["bins"]
             bin_names, control_bins = bin_control(data, self._analysis_config["control_var"], self._analysis_config["control_kwargs"]["bins"])
             self._analysis_config["control_kwargs"] = {"names": bin_names, "bins": control_bins}
+            
+    def plot(self, data : list):
+        """
+        Plots data provided by list of plot data dictionaries.
+        
+        :param data: (list) List of plot data dictionaries
+        :return: (list) List of plot data dictionaries and figures
+        """
+        if len(data) > 1:
+            num_plots = len(data)
+        else:
+            num_plots = 1
+            
+        splt_len = [int(np.ceil(np.sqrt(num_plots))), int(np.floor(np.sqrt(num_plots)))]
+        if splt_len[0]*splt_len[1] < num_plots:
+            splt_len = [int(np.ceil(np.sqrt(num_plots))), int(np.ceil(np.sqrt(num_plots)))]
+        fig, ax = plt.subplots(splt_len[0],splt_len[1],figsize=(7.5, 7.5 ))
+        
+        for i in range(num_plots):
+            #series (legend) loop
+            for j in range(len(data[i]["plot"])):
+                subset = data[i]["data"][j]
+                subset_grouped = subset.groupby(self._analysis_config["x"])
+                if "avg" in self._analysis_config and self._analysis_config["avg"] is not None:
+                    x = list(subset_grouped[self._analysis_config["x"]].keys())
+                    y = subset_grouped[self._analysis_config["y"]].mean()
+                else:
+                    x = subset[self._analysis_config["x"]].tolist()
+                    y = subset[self._analysis_config["y"]].tolist()
+                
+                if "sort" in self._analysis_config and self._analysis_config["sort"] is not None:
+                    x, y = zip(*sorted(zip(x, y)))
+                if "smooth" in self._analysis_config and self._analysis_config["smooth"] is not None:
+                    x, y = smooth(x, y, self._analysis_config["smooth"])
+                    
+                ax[i,j] = plot_by_type(ax[i,j], x, y, self._analysis_config["fig"]["type"], self._analysis_config["fig"]["kwargs"])
+                
+                if data[i]["plot"][j] == "all":
+                    data[i]["plot"][j] = self._analysis_config["fig"]["title"]
+                
+                ax[i, j].set_title(data[i]["plot"][j])
+                ax[i, j].legend(data[i]["data"]["legend"])
+                ax[i, j].set_xlabel(self._analysis_config["x"])
+                ax[i, j].set_ylabel(self._analysis_config["y"])
+
+def plot_by_type(ax, x, y, plot_type, plot_kwargs):
+    """
+    Plot data by type
+
+    :param ax: (matplotlib.axes) Axes to plot on
+    :param x: (list) x values
+    :param y: (list) y values
+    :param plot_type: (str) Type of plot
+    :param plot_kwargs: (dict) Plot kwargs
+    :return: (matplotlib.axes) Axes with plot
+    """
+    if plot_type == "line":
+        ax.plot(x, y, **plot_kwargs)
+    elif plot_type == "scatter":
+        ax.scatter(x, y, **plot_kwargs)
+    elif plot_type == "bar":
+        ax.bar(x, y, **plot_kwargs)
+    return ax
+
+def smooth(x, y, smooth_factor):
+    """
+    Smooth data
+
+    :param x: (list) x values
+    :param y: (list) y values
+    :param smooth_factor: (int) Number of points to smooth over
+    :return: (tuple) Smoothed x and y values
+    """
+    x_smooth = []
+    y_smooth = []
+    for i in range(len(x)):
+        if i < smooth_factor:
+            x_smooth.append(x[i])
+            y_smooth.append(np.mean(y[:i+1]))
+        else:
+            x_smooth.append(x[i])
+            y_smooth.append(np.mean(y[i-smooth_factor:i+1]))
+    return x_smooth, y_smooth
     
 def bin_control(data : pd.DataFrame, control_var : str, bins : dict = {}):
     """

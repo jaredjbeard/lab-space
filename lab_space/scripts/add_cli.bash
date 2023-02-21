@@ -8,12 +8,19 @@ if ! test -d "$bin_loc"; then
 fi
 
 chmod +x $parent/labspace.py
+chmod +x $parent/dataspace.py
 
 save_loc=bin/labspace
 if test -f "$save_loc"; then
     rm "$save_loc"
 fi
 ln -s $parent/labspace.py $save_loc
+
+save_loc=bin/dataspace
+if test -f "$save_loc"; then
+    rm "$save_loc"
+fi
+ln -s $parent/dataspace.py $save_loc
     
 export_path='export PATH="$PATH:parent/bin/"'
 export_path=${export_path/parent/$parent}

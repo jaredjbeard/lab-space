@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 This script is handle command line argmuents for starting analyzing data.
 """
@@ -20,7 +20,9 @@ import json
 import reconfigurator.reconfigurator as rc
 from reconfigurator.compiler import compile_as_generator, compile_to_list
 
-from lab_space.old_analysis import Analysis
+from analysis import Analysis
+from file_utils import merge_files
+
 
 CORE_FILE_NAME = "/config/core/core.json"
 CORE_DEFAULT_FILE_NAME = "/config/core/core_default.json"
@@ -31,6 +33,9 @@ CORE_DEFAULT_FILE_NAME = "/config/core/core_default.json"
 # MARKUP
 # Should support aliasing so we can compare variables of similar function
 # Should support binning of a variable either through number of bins or user specified bins.
+
+
+    
 
 if __name__=='__main__':
 
@@ -54,6 +59,8 @@ if __name__=='__main__':
     parser.add_argument('-al',  '--log_level',                      type=str, nargs = 1,  help='Sets log level')
 
     parser.add_argument('-ac',  '--compile',           action="store_const", const=True,  help='Compiles analysis config file')
+    
+    parser.add_argument('-m',  '--merge',             type=str, nargs="+", help='Merges data from a list of files into a single file, uses the last file name as the save file name')
 
     parser.add_argument('-s',    '--save',             action="store_const", const=True,  help='Saves settings for experiment and trial data to current files. If trial is compiled, will append "c_" to file name and save compiled version')
     parser.add_argument('-sa', '--save_analysis', type=str, nargs="+", help='Saves analysis data, if argument specified saves to that file in path')
@@ -73,102 +80,104 @@ if __name__=='__main__':
             json.dump(core_default, f, indent=4)
         print("Core Reset")
     
+    if args.merge is not None:
+        merge_files(args.merge)
 
-    #---> ##========>>
-    if args.configure_path is not None:
-        core_config["trial_path"] = args.configure_path[0]
-        core_config["expt_path"] = args.configure_path[0]
-        core_config["save_path"] = args.configure_path[0]
-        rc.write_file(current + CORE_FILE_NAME, core_config)
+    # #---> ##========>>
+    # if args.configure_path is not None:
+    #     core_config["trial_path"] = args.configure_path[0]
+    #     core_config["expt_path"] = args.configure_path[0]
+    #     core_config["save_path"] = args.configure_path[0]
+    #     rc.write_file(current + CORE_FILE_NAME, core_config)
 
-    if args.configure_trial_path is not None:
-        core_config["trial_path"] = args.configure_trial_path[0]
-        rc.write_file(current + CORE_FILE_NAME, core_config)
-    if args.configure_trial is not None:
-        core_config["trial_name"] = args.configure_trial[0]
-        rc.write_file(current + CORE_FILE_NAME, core_config)
-    trial_config = rc.read_file(core_config["trial_path"] + core_config["trial_name"])
+    # if args.configure_trial_path is not None:
+    #     core_config["trial_path"] = args.configure_trial_path[0]
+    #     rc.write_file(current + CORE_FILE_NAME, core_config)
+    # if args.configure_trial is not None:
+    #     core_config["trial_name"] = args.configure_trial[0]
+    #     rc.write_file(current + CORE_FILE_NAME, core_config)
+    # trial_config = rc.read_file(core_config["trial_path"] + core_config["trial_name"])
 
-    if args.configure_experiment_path is not None:
-        core_config["expt_path"] = args.configure_experiment_path[0]
-    if args.configure_experiment is not None:
-        core_config["expt_name"] = args.configure_experiment[0]
-    expt_config = rc.read_file(core_config["expt_path"] + core_config["expt_name"])
+    # if args.configure_experiment_path is not None:
+    #     core_config["expt_path"] = args.configure_experiment_path[0]
+    # if args.configure_experiment is not None:
+    #     core_config["expt_name"] = args.configure_experiment[0]
+    # expt_config = rc.read_file(core_config["expt_path"] + core_config["expt_name"])
 
-    if args.configure_save_path is not None:
-        core_config["save_path"] = args.configure_save_path[0]
-        rc.write_file(current + CORE_FILE_NAME, core_config)
-    if args.save_file is not None:
-        if args.save_file[0] == "none":
-            core_config["save_file"] = None
-        else:
-            expt_config["save_file"] = args.save_file[0]
+    # if args.configure_save_path is not None:
+    #     core_config["save_path"] = args.configure_save_path[0]
+    #     rc.write_file(current + CORE_FILE_NAME, core_config)
+    # if args.save_file is not None:
+    #     if args.save_file[0] == "none":
+    #         core_config["save_file"] = None
+    #     else:
+    #         expt_config["save_file"] = args.save_file[0]
 
-    if args.num_trials is not None:
-        expt_config["n_trials"] = args.num_trials[0]
-    if args.num_processes is not None:
-        expt_config["n_processes"] = args.num_processes[0]
-    if args.clear_save is not None:
-        expt_config["clear_save"] = bool(args.clear_save[0])
-    if args.log_level is not None:
-        expt_config["log_level"] = args.log_level[0]
+    # if args.num_trials is not None:
+    #     expt_config["n_trials"] = args.num_trials[0]
+    # if args.num_processes is not None:
+    #     expt_config["n_processes"] = args.num_processes[0]
+    # if args.clear_save is not None:
+    #     expt_config["clear_save"] = bool(args.clear_save[0])
+    # if args.log_level is not None:
+    #     expt_config["log_level"] = args.log_level[0]
     
-    uncompiled_trial_config = deepcopy(trial_config)
-    if args.compile is not None:
-        trial_config = compile_as_generator(trial_config)
+    # uncompiled_trial_config = deepcopy(trial_config)
+    # if args.compile is not None:
+    #     trial_config = compile_as_generator(trial_config)
         
 
-    # Save --------------------------------------------------------------------------------------------
-    if args.save is not None and args.save:
-        if args.compile is not None:
-            temp_tc = compile_to_list(uncompiled_trial_config)
-            rc.write_file(core_config["trial_path"] + "c_" + core_config["trial_name"], temp_tc)
-        else:
-            rc.write_file(core_config["trial_path"] + core_config["trial_name"], trial_config)
-        rc.write_file(core_config["expt_path"] + core_config["expt_name"], expt_config)
+    # # Save --------------------------------------------------------------------------------------------
+    # if args.save is not None and args.save:
+    #     if args.compile is not None:
+    #         temp_tc = compile_to_list(uncompiled_trial_config)
+    #         rc.write_file(core_config["trial_path"] + "c_" + core_config["trial_name"], temp_tc)
+    #     else:
+    #         rc.write_file(core_config["trial_path"] + core_config["trial_name"], trial_config)
+    #     rc.write_file(core_config["expt_path"] + core_config["expt_name"], expt_config)
     
-    if args.save_trial is not None:
-        if args.save_trial == "none":
-            if args.compile is not None:
-                temp_tc = compile_to_list(uncompiled_trial_config)
-                rc.write_file(core_config["trial_path"] + "c_" + core_config["trial_name"], temp_tc)
-            else:
-                rc.write_file(core_config["trial_path"] + core_config["trial_name"], trial_config)
-        else:
-            if not isinstance(trial_config, list):
-                temp_tc = compile_to_list(uncompiled_trial_config)
-                rc.write_file(core_config["trial_path"] + "c_" + args.save_trial[0], temp_tc)
-            else:
-                rc.write_file(core_config["trial_path"] + args.save_trial[0], trial_config)
+    # if args.save_trial is not None:
+    #     if args.save_trial == "none":
+    #         if args.compile is not None:
+    #             temp_tc = compile_to_list(uncompiled_trial_config)
+    #             rc.write_file(core_config["trial_path"] + "c_" + core_config["trial_name"], temp_tc)
+    #         else:
+    #             rc.write_file(core_config["trial_path"] + core_config["trial_name"], trial_config)
+    #     else:
+    #         if not isinstance(trial_config, list):
+    #             temp_tc = compile_to_list(uncompiled_trial_config)
+    #             rc.write_file(core_config["trial_path"] + "c_" + args.save_trial[0], temp_tc)
+    #         else:
+    #             rc.write_file(core_config["trial_path"] + args.save_trial[0], trial_config)
     
-    if args.save_experiment is not None:
-        if args.save_experiment == "none":
-            rc.write_file(core_config["expt_path"] + core_config["expt_name"], expt_config)
-        else:
-            rc.write_file(core_config["expt_path"] + args.save_experiment[0], expt_config)
+    # if args.save_experiment is not None:
+    #     if args.save_experiment == "none":
+    #         rc.write_file(core_config["expt_path"] + core_config["expt_name"], expt_config)
+    #     else:
+    #         rc.write_file(core_config["expt_path"] + args.save_experiment[0], expt_config)
 
-    # Print --------------------------------------------------------------------------------------------
-    if args.print is not None and args.print:
-        print(f'{"Core Config":-<20}')
-        rc.print_config(core_config)
-        print()
-        print()
-        print(f'{"Trial Config":-<20}')
-        if isinstance(trial_config,dict):
-            rc.print_config(trial_config)
-        elif args.save is not None and args.save or args.save_trial is not None:
-            print(temp_tc)
-        else:
-            print(uncompiled_trial_config)
-        print()
-        print()
-        print(f'{"Experiment Config":-<20}')
-        rc.print_config(expt_config)
+    # # Print --------------------------------------------------------------------------------------------
+    # if args.print is not None and args.print:
+    #     print(f'{"Core Config":-<20}')
+    #     rc.print_config(core_config)
+    #     print()
+    #     print()
+    #     print(f'{"Trial Config":-<20}')
+    #     if isinstance(trial_config,dict):
+    #         rc.print_config(trial_config)
+    #     elif args.save is not None and args.save or args.save_trial is not None:
+    #         print(temp_tc)
+    #     else:
+    #         print(uncompiled_trial_config)
+    #     print()
+    #     print()
+    #     print(f'{"Experiment Config":-<20}')
+    #     rc.print_config(expt_config)
 
-    # Run --------------------------------------------------------------------------------------------
-    if args.run is not None and args.run:
-        expt_config["experiment"] = get_registered_experiment(expt_config["experiment"])
-        if expt_config["save_file"] is not None:
-            expt_config["save_file"] = core_config["save_path"] + expt_config["save_file"]
-        expt = Experiment(trial_config, expt_config, expt_config["log_level"])
-        print(expt.run())
+    # # Run --------------------------------------------------------------------------------------------
+    # if args.run is not None and args.run:
+    #     expt_config["experiment"] = get_registered_experiment(expt_config["experiment"])
+    #     if expt_config["save_file"] is not None:
+    #         expt_config["save_file"] = core_config["save_path"] + expt_config["save_file"]
+    #     expt = Experiment(trial_config, expt_config, expt_config["log_level"])
+    #     print(expt.run())

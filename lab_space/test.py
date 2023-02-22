@@ -13,7 +13,7 @@ if __name__ == "__main__":
         "x" : "longcount",
         "y" : "shortcount",
         "z" : None,
-        "control_var" : None,
+        "control" : None,
         "control_kwargs": 
         {
             "bins" : 
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         {
             "type" : "line",
             "title" : "Test",
-            "xlabel" : "Long Count",
+            "xlabel" : None,
             "ylabel" : "Short Count",
             "legend" : True,
             "legend_loc" : "upper left",

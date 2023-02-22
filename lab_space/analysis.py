@@ -47,7 +47,7 @@ class Analysis():
         - "cross_ref": (str) Name of column to cross reference data by (these are what you will see in the legends)
         - "x": (str) Name of column to use as independent variable
         - "y": (str) Name of column to use as dependent variable
-        - "control_var": (str) Name of column to use as control variable (this will generate subplots for each value, or if there are too many, will bin them)
+        - "control": (str) Name of column to use as control variable (this will generate subplots for each value, or if there are too many, will bin them)
     :param log_level: (str) Logging level, *default*: "WARNING"
     """
     def __init__(self, analysis_config : dict = None, log_level : str = "WARNING"):
@@ -92,8 +92,8 @@ class Analysis():
             raise ValueError("Must provide independent variable")   
         if "y" not in self._analysis_config or self._analysis_config["y"] is None:
             raise ValueError("Must provide dependent variable")
-        if "control_var" not in self._analysis_config:
-            self._analysis_config["control_var"] = None
+        if "control" not in self._analysis_config:
+            self._analysis_config["control"] = None
 
         self._log.warn("Reset experiment")
 
@@ -159,8 +159,8 @@ class Analysis():
         cols = [self._analysis_config["x"], self._analysis_config["y"]]
         if self._analysis_config["cross_ref"] is not None:
             cols.append(self._analysis_config["cross_ref"])
-        if self._analysis_config["control_var"] is not None:
-            cols.append(self._analysis_config["control_var"])
+        if self._analysis_config["control"] is not None:
+            cols.append(self._analysis_config["control"])
         self._analysis_config["filter"]["include_cols"] += cols
 
     def cross_reference(self, data : pd.DataFrame):
@@ -210,7 +210,7 @@ class Analysis():
                 
         plot_data["data"].append(split_data)
         
-        if self._analysis_config["control_var"] is not None:      
+        if self._analysis_config["control"] is not None:      
             for name, bin in zip(self._analysis_config["control_kwargs"]["names"], self._analysis_config["control_kwargs"]["bins"]):
                 temp_data = []
                 for el in split_data:
@@ -226,14 +226,14 @@ class Analysis():
         
         :param data: (pandas.DataFrame) Data to compile bins from
         """
-        if "control_var" not in self._analysis_config:
-            self._analysis_config["control_var"] = None
-        if self._analysis_config["control_var"] is not None:
+        if "control" not in self._analysis_config:
+            self._analysis_config["control"] = None
+        if self._analysis_config["control"] is not None:
             if "control_kwargs" not in self._analysis_config:
                 self._analysis_config["control_kwargs"] = {}
             if "bins" in self._analysis_config["control_kwargs"]:
                 self._analysis_config["control_kwargs"]["bins"] = self._analysis_config["control_kwargs"]["bins"]
-            bin_names, control_bins = bin_control(data, self._analysis_config["control_var"], self._analysis_config["control_kwargs"]["bins"])
+            bin_names, control_bins = bin_control(data, self._analysis_config["control"], self._analysis_config["control_kwargs"]["bins"])
             self._analysis_config["control_kwargs"] = {"names": bin_names, "bins": control_bins}
             
     def plot(self, data : list):
@@ -277,8 +277,15 @@ class Analysis():
                 
                 ax[i, j].set_title(data[i]["plot"][j])
                 ax[i, j].legend(data[i]["data"]["legend"])
-                ax[i, j].set_xlabel(self._analysis_config["x"])
-                ax[i, j].set_ylabel(self._analysis_config["y"])
+                
+                if "xlabel" in self._analysis_config["fig"]:
+                    ax[i, j].set_xlabel(self._analysis_config["fig"]["xlabel"])
+                else:
+                    ax[i, j].set_xlabel(self._analysis_config["x"])
+                if "ylabel" in self._analysis_config["fig"]:
+                    ax[i,j].set_ylabel(self._analysis_config["fig"]["ylabel"])
+                else:
+                    ax[i, j].set_ylabel(self._analysis_config["y"])
 
 def plot_by_type(ax, x, y, plot_type, plot_kwargs):
     """
@@ -319,27 +326,27 @@ def smooth(x, y, smooth_factor):
             y_smooth.append(np.mean(y[i-smooth_factor:i+1]))
     return x_smooth, y_smooth
     
-def bin_control(data : pd.DataFrame, control_var : str, bins : dict = {}):
+def bin_control(data : pd.DataFrame, control : str, bins : dict = {}):
     """
     Bin control variable data.
 
     :param data: (pd.DataFrame) Data to bin
-    :param control_var: (str) Name of control variable
+    :param control: (str) Name of control variable
     :param bins: (dict) How to bin data
     :return: (list) List of dictionaries containing legend and data
     """
     if "bins" in bins and isinstance(bins["bins"], list):
         bin_vals = bins["bins"]
     elif "bins" in bins and isinstance(bins["bins"], int):
-        bin_min = data[control_var].min()
-        bin_max = data[control_var].max()
+        bin_min = data[control].min()
+        bin_max = data[control].max()
         bin_vals = np.linspace(bin_min, bin_max, bins["bins"]+1)
     elif "size" in bins:
-        bin_vals = [data[control_var].min()]
-        while bin_vals[-1] < data[control_var].max():
+        bin_vals = [data[control].min()]
+        while bin_vals[-1] < data[control].max():
             bin_vals.append(bin_vals[-1] + bins["size"])
     else:
-        bin_vals = list(data[control_var].unique())
+        bin_vals = list(data[control].unique())
     
     bin_names = []
     if "labels" in bins:
@@ -348,21 +355,21 @@ def bin_control(data : pd.DataFrame, control_var : str, bins : dict = {}):
     control_bins = []
     if isinstance(bin_vals[i], str) or bins == {}:
         for i in range(len(bin_vals)):
-            bin_names.append(control_var + " " + str(bin_vals[i]))
-            control_bins.append({"col":control_var, "op": "=", "val": bin_vals[i]}) 
+            bin_names.append(control + " " + str(bin_vals[i]))
+            control_bins.append({"col":control, "op": "=", "val": bin_vals[i]}) 
     else:
         for i in range(len(bins)-1):
             if i == 0:
-                bin_names.append(control_var + "[ " + str(bin_vals[i]) + ", " + str(bin_vals[i+1]) + "]")
+                bin_names.append(control + "[ " + str(bin_vals[i]) + ", " + str(bin_vals[i+1]) + "]")
                 control_bins.append({"and": 
-                    [{"col":control_var, "op": ">=", "val": bin_vals[i]}, 
-                     {"col":control_var, "op": "=<", "val": bin_vals[i+1]}
+                    [{"col":control, "op": ">=", "val": bin_vals[i]}, 
+                     {"col":control, "op": "=<", "val": bin_vals[i+1]}
                     ]})
             else:
-                bin_names.append(control_var + "( " + str(bin_vals[i]) + ", " + str(bin_vals[i+1]) + "]")
+                bin_names.append(control + "( " + str(bin_vals[i]) + ", " + str(bin_vals[i+1]) + "]")
                 control_bins.append({"and": 
-                    [{"col":control_var, "op": ">", "val": bin_vals[i]}, 
-                     {"col":control_var, "op": "=<", "val": bin_vals[i+1]}
+                    [{"col":control, "op": ">", "val": bin_vals[i]}, 
+                     {"col":control, "op": "=<", "val": bin_vals[i+1]}
                     ]})
     return bin_names, control_bins
 

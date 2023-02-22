@@ -4,6 +4,11 @@
     "expt_path": "",
     "expt_name": "",
     "save_path": "",
+    "save_file": null,
+    "analysis_path": "",
+    "analysis_file": "analysis_config.json",
+    "figure_path": "",
+    "figure_file": "test",
     "experiments": 
         {
         "f":

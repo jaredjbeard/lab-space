@@ -118,12 +118,13 @@ if __name__=='__main__':
     parser.add_argument('-ct',  '--configure_trial',                type=str, nargs = 1, help='Configures file name for trial config')
     parser.add_argument('-cep', '--configure_experiment_path',      type=str, nargs = 1, help='Configures path of experiment config files')
     parser.add_argument('-ce',  '--configure_experiment',           type=str, nargs = 1, help='Configures file name for experiment config')
-    parser.add_argument('-csp', '--configure_save_path',            type=str, nargs = 1, help='Configures path of save files')
+    parser.add_argument('-cdp', '--configure_data_path',            type=str, nargs = 1, help='Configures path of data files')
+    parser.add_argument('-cdf', '--configure_data_file',                      type=str, nargs ="+", help='Updates file name for data files, if "none" will set to NoneType')
+
     
     parser.add_argument('-tt',  '--num_trials',                     type=int, nargs = 1,  help='Number of trials to run')
     parser.add_argument('-tp',  '--num_processes',                  type=int, nargs = 1,  help='Number of processes to run')
-    parser.add_argument('-ts',  '--save_file',                      type=str, nargs ="+", help='Updates file name for save files, if "none" will set to NoneType')
-    parser.add_argument('-tcs', '--clear_save',                     type=int ,nargs = 1,  help='Clears save file, 0 -> false, 1 -> true')
+    parser.add_argument('-tcs', '--clear_data',                     type=int ,nargs = 1,  help='Clears data file, 0 -> false, 1 -> true')
     parser.add_argument('-tl',  '--log_level',                      type=str, nargs = 1,  help='Sets log level')
     parser.add_argument('-tc',  '--compile',           action="store_const", const=True,  help='Compiles trial config file')
 
@@ -158,7 +159,7 @@ if __name__=='__main__':
     if args.configure_path is not None:
         core_config["trial_path"] = args.configure_path[0]
         core_config["expt_path"] = args.configure_path[0]
-        core_config["save_path"] = args.configure_path[0]
+        core_config["data_path"] = args.configure_path[0]
         rc.write_file(current + CORE_FILE_NAME, core_config)
 
     if args.configure_trial_path is not None:
@@ -175,21 +176,25 @@ if __name__=='__main__':
         core_config["expt_name"] = args.configure_experiment[0]
     expt_config = rc.read_file(core_config["expt_path"] + core_config["expt_name"])
 
-    if args.configure_save_path is not None:
-        core_config["save_path"] = args.configure_save_path[0]
+    if args.configure_data_path is not None:
+        core_config["data_path"] = args.configure_data_path[0]
         rc.write_file(current + CORE_FILE_NAME, core_config)
-    if args.save_file is not None:
-        if args.save_file[0] == "none":
-            core_config["save_file"] = None
+    if "data_path" not in expt_config:
+        expt_config["data_path"] = core_config["data_path"]
+    if args.configure_data_file is not None:
+        if args.data_file[0] == "none":
+            expt_config["data_file"] = None
         else:
-            expt_config["save_file"] = args.save_file[0]
+            expt_config["data_file"] = args.data_file[0]
+    if "data_file" not in expt_config:
+        expt_config["data_file"] = core_config["data_file"]
 
     if args.num_trials is not None:
         expt_config["n_trials"] = args.num_trials[0]
     if args.num_processes is not None:
         expt_config["n_processes"] = args.num_processes[0]
-    if args.clear_save is not None:
-        expt_config["clear_save"] = bool(args.clear_save[0])
+    if args.clear_data is not None:
+        expt_config["clear_data"] = bool(args.clear_data[0])
     if args.log_level is not None:
         expt_config["log_level"] = args.log_level[0]
     
@@ -258,7 +263,7 @@ if __name__=='__main__':
     # Run --------------------------------------------------------------------------------------------
     if args.run is not None and args.run:
         expt_config["experiment"] = get_registered_experiment(expt_config["experiment"])
-        if expt_config["save_file"] is not None:
-            expt_config["save_file"] = core_config["save_path"] + expt_config["save_file"]
+        if expt_config["data_file"] is not None:
+            expt_config["data_file"] = expt_config["data_path"] + expt_config["data_file"]
         expt = Experiment(trial_config, expt_config, expt_config["log_level"])
         print(expt.run())

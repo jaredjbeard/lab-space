@@ -40,32 +40,32 @@ CORE_DEFAULT_FILE_NAME = "/config/core/core_default.json"
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Lab Space Analysis CLI')
-    parser.add_argument('-r',   '--run',           action="store_const", const=True,  help='Runs analysis, if unspecified runs user default')
+    # parser.add_argument('-r',   '--run',           action="store_const", const=True,  help='Runs analysis, if unspecified runs user default')
     
     parser.add_argument('-cr',  '--configure_reset', action="store_const", const=True, help='Resets all configuration to factory default')
-    parser.add_argument('-cp',  '--configure_path',                 type=str, nargs=1, help='Configures path of config and data files')
-    parser.add_argument('-csp', '--configure_save_path',            type=str, nargs=1, help='Configures path of save files')
-    parser.add_argument('-csf', '--configure_save_file',            type=str, nargs=1, help='Configures file name for saved data')
-    parser.add_argument('-cap', '--configure_analysis_path',        type=str, nargs=1, help='Configures path of analysis data files')
-    parser.add_argument('-caf', '--configure_analysis_file',        type=str, nargs=1, help='Configures file name for analysis data')
-    parser.add_argument('-cfp', '--configure_figures_path',         type=str, nargs=1, help='Configures path of figure files')
-
-    parser.add_argument('-aff',  '--configure_figures_file',        type=str, nargs=1, help='Configures file name for figures')
-    parser.add_argument('-aft',  '--figure_type',                   type=str, nargs=1, help='Specifies the type of figure to plot')
-    parser.add_argument('-acrv', '--cross_ref_variable',            type=str, nargs="+", help='Specifies the cross reference variable (the variable defining the legend). Can optionally add number of bins if too many values')
-    parser.add_argument('-aiv',  '--independent_variable',          type=str, nargs=1, help='Specifies the independent variable')
-    parser.add_argument('-adv',  '--dependent_variable',            type=str, nargs=1, help='Specifies the dependent variable')
-    parser.add_argument('-acv',  '--control_variable',              type=str, nargs="+", help='Specifies the cross reference variable: generates subplots for each value of the control and all together. Can optionally add number of bins if too many values')
-    parser.add_argument('-al',  '--log_level',                      type=str, nargs = 1,  help='Sets log level')
-
-    parser.add_argument('-ac',  '--compile',           action="store_const", const=True,  help='Compiles analysis config file')
+    parser.add_argument('-cp',  '--configure_path',                 type=str, nargs=  1, help='Configures path of config and data files')
+    parser.add_argument('-cdp', '--configure_data_path',            type=str, nargs=  1, help='Configures path of data files')
+    parser.add_argument('-cdf', '--configure_data_file',            type=str, nargs=  1, help='Configures file name for saved data')
+    parser.add_argument('-cap', '--configure_analysis_path',        type=str, nargs=  1, help='Configures path of analysis data files')
+    parser.add_argument('-caf', '--configure_analysis_file',        type=str, nargs=  1, help='Configures file name for analysis data')
+    parser.add_argument('-cfp', '--configure_figure_path',          type=str, nargs=  1, help='Configures path of figure files')
+    parser.add_argument('-cff', '--configure_figure_file',          type=str, nargs=  1, help='Configures file name for figures')
     
-    parser.add_argument('-m',  '--merge',             type=str, nargs="+", help='Merges data from a list of files into a single file, uses the last file name as the save file name')
+    parser.add_argument('-aft',  '--figure_type',                   type=str, nargs=  1, help='Specifies the type of figure to plot')
+    parser.add_argument('-afn',  '--figure_name',                   type=str, nargs=  1, help='Specifies the name of the figure')
+    parser.add_argument('-acrv', '--cross_ref_variable',            type=str, nargs="+", help='Specifies the cross reference variable (the variable defining the legend). Can optionally add number of bins if too many values')
+    parser.add_argument('-aiv',  '--independent_variable',          type=str, nargs=  1, help='Specifies the independent variable')
+    parser.add_argument('-adv',  '--dependent_variable',            type=str, nargs=  1, help='Specifies the dependent variable')
+    parser.add_argument('-azv',  '--z_variable',                    type=str, nargs=  1, help='Specifies the z variable')
+    parser.add_argument('-acv',  '--control_variable',              type=str, nargs="+", help='Specifies the cross reference variable: generates subplots for each value of the control and all together. Can optionally add number of bins if too many values')
+    parser.add_argument('-al',   '--log_level',                     type=str, nargs=  1, help='Sets log level')
+    
+    parser.add_argument('-m',    '--merge',                         type=str, nargs="+", help='Merges data from a list of files into a single file, uses the last file name as the save file name')
 
-    parser.add_argument('-s',    '--save',             action="store_const", const=True,  help='Saves settings for experiment and trial data to current files. If trial is compiled, will append "c_" to file name and save compiled version')
-    parser.add_argument('-sa', '--save_analysis', type=str, nargs="+", help='Saves analysis data, if argument specified saves to that file in path')
+    parser.add_argument('-s',    '--save',            action="store_const", const=True,  help='Saves settings for experiment and trial data to current files. If trial is compiled, will append "c_" to file name and save compiled version')
+    parser.add_argument('-sa',   '--save_analysis',                 type=str, nargs="+", help='Saves analysis data, if argument specified saves to that file in path')
 
-    parser.add_argument('-p',    '--print',            action="store_const", const=True,  help='Prints config file')
+    parser.add_argument('-p',    '--print',           action="store_const", const=True,  help='Prints config file')
 
     args = parser.parse_args()
     #########################################################################################
@@ -84,57 +84,60 @@ if __name__=='__main__':
         merge_files(args.merge)
 
     # #---> ##========>>
-    # if args.configure_path is not None:
-    #     core_config["trial_path"] = args.configure_path[0]
-    #     core_config["expt_path"] = args.configure_path[0]
-    #     core_config["save_path"] = args.configure_path[0]
-    #     rc.write_file(current + CORE_FILE_NAME, core_config)
+    if args.configure_path is not None:
+        core_config["data_path"] = args.configure_path[0]
+        core_config["analysis_path"] = args.configure_path[0]
+        core_config["figure_path"] = args.configure_path[0]
+        rc.write_file(current + CORE_FILE_NAME, core_config)
 
-    # if args.configure_trial_path is not None:
-    #     core_config["trial_path"] = args.configure_trial_path[0]
-    #     rc.write_file(current + CORE_FILE_NAME, core_config)
-    # if args.configure_trial is not None:
-    #     core_config["trial_name"] = args.configure_trial[0]
-    #     rc.write_file(current + CORE_FILE_NAME, core_config)
-    # trial_config = rc.read_file(core_config["trial_path"] + core_config["trial_name"])
-
-    # if args.configure_experiment_path is not None:
-    #     core_config["expt_path"] = args.configure_experiment_path[0]
-    # if args.configure_experiment is not None:
-    #     core_config["expt_name"] = args.configure_experiment[0]
-    # expt_config = rc.read_file(core_config["expt_path"] + core_config["expt_name"])
-
-    # if args.configure_save_path is not None:
-    #     core_config["save_path"] = args.configure_save_path[0]
-    #     rc.write_file(current + CORE_FILE_NAME, core_config)
-    # if args.save_file is not None:
-    #     if args.save_file[0] == "none":
-    #         core_config["save_file"] = None
-    #     else:
-    #         expt_config["save_file"] = args.save_file[0]
-
-    # if args.num_trials is not None:
-    #     expt_config["n_trials"] = args.num_trials[0]
-    # if args.num_processes is not None:
-    #     expt_config["n_processes"] = args.num_processes[0]
-    # if args.clear_save is not None:
-    #     expt_config["clear_save"] = bool(args.clear_save[0])
-    # if args.log_level is not None:
-    #     expt_config["log_level"] = args.log_level[0]
+    if args.configure_data_path is not None:
+        core_config["data_path"] = args.configure_data_path[0]
+        rc.write_file(current + CORE_FILE_NAME, core_config)
+    if args.configure_data_file is not None:
+        core_config["data_file"] = args.configure_data_file[0]
+        rc.write_file(current + CORE_FILE_NAME, core_config)
     
-    # uncompiled_trial_config = deepcopy(trial_config)
-    # if args.compile is not None:
-    #     trial_config = compile_as_generator(trial_config)
+    if args.configure_analysis_path is not None:
+        core_config["analysis_path"] = args.configure_analysis_path[0]
+        rc.write_file(current + CORE_FILE_NAME, core_config)
+    if args.configure_analysis_file is not None:
+        core_config["analysis_file"] = args.configure_analysis_file[0]
+        rc.write_file(current + CORE_FILE_NAME, core_config)
+    analysis_config = rc.read_file(core_config["analysis_path"] + core_config["analysis_file"])
+        
+    if args.configure_figure_path is not None:
+        core_config["figure_path"] = args.configure_figure_path[0]
+        rc.write_file(current + CORE_FILE_NAME, core_config)
+    if args.configure_figure_file is not None:
+        core_config["figure_file"] = args.configure_figure_file[0]
+        rc.write_file(current + CORE_FILE_NAME, core_config)    
         
 
-    # # Save --------------------------------------------------------------------------------------------
-    # if args.save is not None and args.save:
-    #     if args.compile is not None:
-    #         temp_tc = compile_to_list(uncompiled_trial_config)
-    #         rc.write_file(core_config["trial_path"] + "c_" + core_config["trial_name"], temp_tc)
-    #     else:
-    #         rc.write_file(core_config["trial_path"] + core_config["trial_name"], trial_config)
-    #     rc.write_file(core_config["expt_path"] + core_config["expt_name"], expt_config)
+
+    # Analysis Configurations ---------------------------------------------------------------
+    
+    if args.figure_type is not None:
+        analysis_config["fig"]["type"] = args.figure_type[0]
+    if args.figure_name is not None:
+        analysis_config["fig"]["title"] = args.figure_name[0]
+    if args.cross_ref_variable is not None:
+        analysis_config["cross_ref"] = args.cross_ref_variable[0]
+    if args.independent_variable is not None:
+        analysis_config["x"] = args.independent_variable[0]
+    if args.dependent_variable is not None:
+        analysis_config["y"] = args.dependent_variable[0]
+    if args.z_variable is not None:
+        analysis_config["z"] = args.z_variable[0]
+    if args.control_variable is not None:
+        analysis_config["control"] = args.control_variable[0]
+    if args.log_level is not None:
+        analysis_config["log_level"] = args.log_level[0]
+        
+    # Save --------------------------------------------------------------------------------------------
+    if args.save is not None and args.save:
+        rc.write_file(core_config["expt_path"] + core_config["expt_name"], analysis_config)
+    if args.save_analysis is not None and args.save_analysis:
+        rc.write_file(core_config["expt_path"] + core_config["expt_name"], analysis_config)
     
     # if args.save_trial is not None:
     #     if args.save_trial == "none":
@@ -157,27 +160,17 @@ if __name__=='__main__':
     #         rc.write_file(core_config["expt_path"] + args.save_experiment[0], expt_config)
 
     # # Print --------------------------------------------------------------------------------------------
-    # if args.print is not None and args.print:
-    #     print(f'{"Core Config":-<20}')
-    #     rc.print_config(core_config)
-    #     print()
-    #     print()
-    #     print(f'{"Trial Config":-<20}')
-    #     if isinstance(trial_config,dict):
-    #         rc.print_config(trial_config)
-    #     elif args.save is not None and args.save or args.save_trial is not None:
-    #         print(temp_tc)
-    #     else:
-    #         print(uncompiled_trial_config)
-    #     print()
-    #     print()
-    #     print(f'{"Experiment Config":-<20}')
-    #     rc.print_config(expt_config)
+    if args.print is not None and args.print:
+        print(f'{"Core Config":-<20}')
+        rc.print_config(core_config)
+        print()
+        print()
+        print(f'{"Analysis Config":-<20}')
+        rc.print_config(analysis_config)
 
-    # # Run --------------------------------------------------------------------------------------------
+    # Run --------------------------------------------------------------------------------------------
     # if args.run is not None and args.run:
-    #     expt_config["experiment"] = get_registered_experiment(expt_config["experiment"])
     #     if expt_config["save_file"] is not None:
     #         expt_config["save_file"] = core_config["save_path"] + expt_config["save_file"]
-    #     expt = Experiment(trial_config, expt_config, expt_config["log_level"])
-    #     print(expt.run())
+    #     expt = Analysis(analysis_config, data_config["log_level"])
+    #     expt.run()

@@ -155,5 +155,5 @@ if __name__=='__main__':
         analysis_config["data_file"] = analysis_config["data_path"] + analysis_config["data_file"]
         analysis_config["figure_file"] = analysis_config["figure_path"] + analysis_config["figure_file"]
         print(analysis_config["data_file"])
-        expt = Analysis(analysis_config, analysis_config["log_level"])
-        expt.run()
+        analysis = Analysis(analysis_config, analysis_config["log_level"])
+        analysis.run()

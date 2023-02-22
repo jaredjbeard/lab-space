@@ -121,23 +121,23 @@ class Analysis():
         
         data = filter_data(data, self._analysis_config["filter"])
 
-        print(data)
+        # print(data)
 
         cr_data = self.cross_reference(data)
         
-        for el in cr_data:
-            print("-----------------")
-            print(el["legend"])
-            print(el["data"])
+        # for el in cr_data:
+        #     print("-----------------")
+        #     print(el["legend"])
+        #     print(el["data"])
             
         self.compile_bins(cr_data)
 
         split_data = self.split_data(cr_data)
         
-        print("-----Plot Data-----")
-        for el in split_data:
-            print("-----------------")
-            print(split_data[el])
+        # print("-----Plot Data-----")
+        # for el in split_data:
+        #     print("-----------------")
+        #     print(split_data[el])
         
         
         plt_data = self.plot(split_data)
@@ -243,24 +243,32 @@ class Analysis():
         :param data: (list) List of plot data dictionaries
         :return: (list) List of plot data dictionaries and figures
         """
+        if "kwargs" not in self._analysis_config["fig"]:
+            self._analysis_config["fig"]["kwargs"] = {}
         if len(data) > 1:
-            num_plots = len(data)
+            num_plots = len(data["plot"])
         else:
             num_plots = 1
-            
+
         splt_len = [int(np.ceil(np.sqrt(num_plots))), int(np.floor(np.sqrt(num_plots)))]
         if splt_len[0]*splt_len[1] < num_plots:
             splt_len = [int(np.ceil(np.sqrt(num_plots))), int(np.ceil(np.sqrt(num_plots)))]
         fig, ax = plt.subplots(splt_len[0],splt_len[1],figsize=(7.5, 7.5 ))
+        splt_x = 0
+        splt_y = 0
         
         for i in range(num_plots):
+            if data["plot"][i] == "all":
+                data["plot"][i] = self._analysis_config["fig"]["title"]
             #series (legend) loop
-            for j in range(len(data[i]["plot"])):
-                subset = data[i]["data"][j]
+            for j in range(len(data["data"][i])):
+                subset = data["data"][i][j]["data"]
                 subset_grouped = subset.groupby(self._analysis_config["x"])
                 if "avg" in self._analysis_config and self._analysis_config["avg"] is not None:
-                    x = list(subset_grouped[self._analysis_config["x"]].keys())
-                    y = subset_grouped[self._analysis_config["y"]].mean()
+                    x = list(subset_grouped.groups.keys())
+                    print(x)
+                    y = subset_grouped[self._analysis_config["y"]].mean().tolist()
+                    print(y)
                 else:
                     x = subset[self._analysis_config["x"]].tolist()
                     y = subset[self._analysis_config["y"]].tolist()
@@ -270,24 +278,60 @@ class Analysis():
                 if "smooth" in self._analysis_config and self._analysis_config["smooth"] is not None:
                     x, y = smooth(x, y, self._analysis_config["smooth"])
                     
-                ax[i,j] = plot_by_type(ax[i,j], x, y, self._analysis_config["fig"]["type"], self._analysis_config["fig"]["kwargs"])
                 
-                if data[i]["plot"][j] == "all":
-                    data[i]["plot"][j] = self._analysis_config["fig"]["title"]
-                
-                ax[i, j].set_title(data[i]["plot"][j])
-                ax[i, j].legend(data[i]["data"]["legend"])
-                
-                if "xlabel" in self._analysis_config["fig"]:
-                    ax[i, j].set_xlabel(self._analysis_config["fig"]["xlabel"])
+                if splt_len[1] > 1:
+                    ax[splt_x,splt_y] = plot_by_type(ax[splt_x,splt_y], x, y, self._analysis_config["fig"]["type"], self._analysis_config["fig"]["kwargs"])
+                    ax[splt_x,splt_y].set_title(data["plot"][i])
+                    ax[splt_x,splt_y].legend(data["data"][i][j]["legend"])
+                    
+                    if "xlabel" in self._analysis_config["fig"]:
+                        ax[splt_x,splt_y].set_xlabel(self._analysis_config["fig"]["xlabel"])
+                    else:
+                        ax[splt_x,splt_y].set_xlabel(self._analysis_config["x"])
+                    if "ylabel" in self._analysis_config["fig"]:
+                        ax[splt_x,splt_y].set_ylabel(self._analysis_config["fig"]["ylabel"])
+                    else:
+                        ax[splt_x,splt_y].set_ylabel(self._analysis_config["y"])
+                        
+                    if splt_y == splt_len[1]-1:
+                        splt_y = 0
+                        splt_x += 1
+                    else:
+                        splt_y += 1
+                elif splt_len[0] > 1:
+                    ax[splt_x] = plot_by_type(ax[splt_x], x, y, self._analysis_config["fig"]["type"], self._analysis_config["fig"]["kwargs"])
+                    ax[splt_x].set_title(data["plot"][i])
+                    ax[splt_x].legend(data["data"][i][j]["legend"])
+                    
+                    if "xlabel" in self._analysis_config["fig"]:
+                        ax[splt_x].set_xlabel(self._analysis_config["fig"]["xlabel"])
+                    else:
+                        ax[splt_x].set_xlabel(self._analysis_config["x"])
+                    if "ylabel" in self._analysis_config["fig"]:
+                        ax[splt_x].set_ylabel(self._analysis_config["fig"]["ylabel"])
+                    else:
+                        ax[splt_x].set_ylabel(self._analysis_config["y"])
+                        
+                    splt_x += 1
                 else:
-                    ax[i, j].set_xlabel(self._analysis_config["x"])
-                if "ylabel" in self._analysis_config["fig"]:
-                    ax[i,j].set_ylabel(self._analysis_config["fig"]["ylabel"])
-                else:
-                    ax[i, j].set_ylabel(self._analysis_config["y"])
+                    ax = plot_by_type(ax, x, y, self._analysis_config["fig"]["type"], self._analysis_config["fig"]["kwargs"])
+                    ax.set_title(data["plot"][i])
+                    ax.legend(data["data"][i][j]["legend"])
+                    
+                    if "xlabel" in self._analysis_config["fig"]:
+                        ax.set_xlabel(self._analysis_config["fig"]["xlabel"])
+                    else:
+                        ax.set_xlabel(self._analysis_config["x"])
+                    if "ylabel" in self._analysis_config["fig"]:
+                        ax.set_ylabel(self._analysis_config["fig"]["ylabel"])
+                    else:
+                        ax.set_ylabel(self._analysis_config["y"])
+                        
+        plt.show()
+        while 1:
+            plt.pause(1)
 
-def plot_by_type(ax, x, y, plot_type, plot_kwargs):
+def plot_by_type(ax, x, y, plot_type, plot_kwargs = None):
     """
     Plot data by type
 

@@ -32,16 +32,16 @@ class Analysis():
     """
     Analyses a set of data.
 
-    With regard to saving, in the <save_path> folder, analysis will add a folder for the given day and time. Within this, it will create the following files:
-        - <save_file>.csv: The data used for the analysis
-        - <save_file>.pkl: The figures from the analysis
-        - <save_file>.png: The figures from the analysis
-        - <save_file>.eps: The figures from the analysis
+    With regard to saving, in the <figure_path> folder, analysis will add a folder for the given day and time. Within this, it will create the following files:
+        - <figure_file>.csv: The data used for the analysis
+        - <figure_file>.pkl: The figures from the analysis
+        - <figure_file>.png: The figures from the analysis
+        - <figure_file>.eps: The figures from the analysis
 
     :param analysis_config: (dict) Analysis configuration containing the following keys:
         - "data_file: (str) Path of data file (csv or xcls)
-        - "save_path": (str) Path to save figures to
-        - "save_file": (str) Path of save file (do not include extension, figures will be saved as .png, .eps, and .pkl)
+        - "figure_path": (str) Path to save figures to
+        - "figure_file": (str) Path of save file (do not include extension, figures will be saved as .png, .eps, and .pkl)
         - "type": (str) type of figures to generate (can be a list). options include line, contour
         - "fig_params": (dict) Parameters for figure generation for each figure
         - "cross_ref": (str) Name of column to cross reference data by (these are what you will see in the legends)
@@ -78,9 +78,9 @@ class Analysis():
 
         if "data_file" not in self._analysis_config or self._analysis_config["data_file"] is None:
             raise ValueError("Must provide data file")
-        if "save_file" not in self._analysis_config or self._analysis_config["save_file"] is None:
+        if "figure_file" not in self._analysis_config or self._analysis_config["figure_file"] is None:
             raise ValueError("Must provide save file")
-        if "save_path" not in self._analysis_config or self._analysis_config["save_path"] is None:
+        if "figure_path" not in self._analysis_config or self._analysis_config["figure_path"] is None:
             raise ValueError("Must provide save path")
         if "type" not in self._analysis_config or self._analysis_config["type"] is None:
             self._analysis_config["type"] = "line"
@@ -97,7 +97,7 @@ class Analysis():
 
         self._log.warn("Reset experiment")
 
-    def analyze(self, analysis_config : dict = None):
+    def run(self, analysis_config : dict = None):
         """
         Run analysis
 
@@ -113,8 +113,8 @@ class Analysis():
 
         if "filter" not in self._analysis_config:
             self._analysis_config["filter"] = {}
-        if "include_cols" not in self._analysis_config["filter"]:
-            self._analysis_config["filter"]["include_cols"] = []
+        # if "include_cols" not in self._analysis_config["filter"]:
+        #     self._analysis_config["filter"]["include_cols"] = []
         
         if "rm_unused_cols" in self._analysis_config["filter"] and self._analysis_config["filter"]["rm_unused_cols"]:
             self.rm_unused_cols()
@@ -410,10 +410,13 @@ def filter_data(data : pd.DataFrame, filter_config : dict):
     :return: (pd.DataFrame) filtered data
     """
     if "include_cols" in filter_config and filter_config["include_cols"] is not None:
+        print(1)
         data = include_cols_filter(data, filter_config["include_cols"])
     if "exclude_cols" in filter_config and filter_config["exclude_cols"] is not None:
+        print(2)
         data = exclude_cols_filter(data, filter_config["exclude_cols"])
     if "logic" in filter_config and filter_config["logic"] is not None:
+        print(3)
         return data[data_logic(data, filter_config["logic"])]
     return data
 

@@ -40,7 +40,7 @@ CORE_DEFAULT_FILE_NAME = "/config/core/core_default.json"
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Lab Space Analysis CLI')
-    # parser.add_argument('-r',   '--run',           action="store_const", const=True,  help='Runs analysis, if unspecified runs user default')
+    parser.add_argument('-r',   '--run',           action="store_const", const=True,  help='Runs analysis, if unspecified runs user default')
     
     parser.add_argument('-cr',  '--configure_reset', action="store_const", const=True, help='Resets all configuration to factory default')
     parser.add_argument('-cp',  '--configure_path',                 type=str, nargs=  1, help='Configures path of config and data files')
@@ -132,6 +132,8 @@ if __name__=='__main__':
         analysis_config["control"] = args.control_variable[0]
     if args.log_level is not None:
         analysis_config["log_level"] = args.log_level[0]
+    elif "log_level" not in analysis_config:
+        analysis_config["log_level"] = "WARNING"
         
     # Save --------------------------------------------------------------------------------------------
     if args.save is not None and args.save:
@@ -139,26 +141,6 @@ if __name__=='__main__':
     if args.save_analysis is not None and args.save_analysis:
         rc.write_file(core_config["expt_path"] + core_config["expt_name"], analysis_config)
     
-    # if args.save_trial is not None:
-    #     if args.save_trial == "none":
-    #         if args.compile is not None:
-    #             temp_tc = compile_to_list(uncompiled_trial_config)
-    #             rc.write_file(core_config["trial_path"] + "c_" + core_config["trial_name"], temp_tc)
-    #         else:
-    #             rc.write_file(core_config["trial_path"] + core_config["trial_name"], trial_config)
-    #     else:
-    #         if not isinstance(trial_config, list):
-    #             temp_tc = compile_to_list(uncompiled_trial_config)
-    #             rc.write_file(core_config["trial_path"] + "c_" + args.save_trial[0], temp_tc)
-    #         else:
-    #             rc.write_file(core_config["trial_path"] + args.save_trial[0], trial_config)
-    
-    # if args.save_experiment is not None:
-    #     if args.save_experiment == "none":
-    #         rc.write_file(core_config["expt_path"] + core_config["expt_name"], expt_config)
-    #     else:
-    #         rc.write_file(core_config["expt_path"] + args.save_experiment[0], expt_config)
-
     # # Print --------------------------------------------------------------------------------------------
     if args.print is not None and args.print:
         print(f'{"Core Config":-<20}')
@@ -169,8 +151,9 @@ if __name__=='__main__':
         rc.print_config(analysis_config)
 
     # Run --------------------------------------------------------------------------------------------
-    # if args.run is not None and args.run:
-    #     if expt_config["save_file"] is not None:
-    #         expt_config["save_file"] = core_config["save_path"] + expt_config["save_file"]
-    #     expt = Analysis(analysis_config, data_config["log_level"])
-    #     expt.run()
+    if args.run is not None and args.run:
+        analysis_config["data_file"] = analysis_config["data_path"] + analysis_config["data_file"]
+        analysis_config["figure_file"] = analysis_config["figure_path"] + analysis_config["figure_file"]
+        print(analysis_config["data_file"])
+        expt = Analysis(analysis_config, analysis_config["log_level"])
+        expt.run()

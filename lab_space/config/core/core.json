@@ -3,19 +3,17 @@
     "trial_name": "",
     "expt_path": "",
     "expt_name": "",
-    "save_path": "",
-    "save_file": null,
-    "analysis_path": "",
-    "analysis_file": "analysis_config.json",
+    "data_path": "",
+    "data_file": null,
+    "analysis_path": "/home/jared/Data/IROS_2023_AAGS_Data/config/",
+    "analysis_file": "test.json",
     "figure_path": "",
     "figure_file": "test",
-    "experiments": 
-        {
-        "f":
-            {
-                "module_path": "functions",
-                "module_name": "functions",
-                "function_name": "f"
-            }
+    "experiments": {
+        "f": {
+            "module_path": "functions",
+            "module_name": "functions",
+            "function_name": "f"
         }
+    }
 }

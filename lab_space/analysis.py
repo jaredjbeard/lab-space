@@ -260,7 +260,11 @@ class Analysis():
         for i in range(num_plots):
             if data["plot"][i] == "all":
                 data["plot"][i] = self._analysis_config["fig"]["title"]
+            print(data["data"][i])
             #series (legend) loop
+            plt_legend = []
+            for j in range(len(data["data"][i])):
+                plt_legend.append(data["data"][i][j]["legend"])
             for j in range(len(data["data"][i])):
                 subset = data["data"][i][j]["data"]
                 subset_grouped = subset.groupby(self._analysis_config["x"])
@@ -282,7 +286,7 @@ class Analysis():
                 if splt_len[1] > 1:
                     ax[splt_x,splt_y] = plot_by_type(ax[splt_x,splt_y], x, y, self._analysis_config["fig"]["type"], self._analysis_config["fig"]["kwargs"])
                     ax[splt_x,splt_y].set_title(data["plot"][i])
-                    ax[splt_x,splt_y].legend(data["data"][i][j]["legend"])
+                    ax[splt_x,splt_y].legend(plt_legend)
                     
                     if "xlabel" in self._analysis_config["fig"]:
                         ax[splt_x,splt_y].set_xlabel(self._analysis_config["fig"]["xlabel"])
@@ -301,7 +305,7 @@ class Analysis():
                 elif splt_len[0] > 1:
                     ax[splt_x] = plot_by_type(ax[splt_x], x, y, self._analysis_config["fig"]["type"], self._analysis_config["fig"]["kwargs"])
                     ax[splt_x].set_title(data["plot"][i])
-                    ax[splt_x].legend(data["data"][i][j]["legend"])
+                    ax[splt_x].legend(plt_legend)
                     
                     if "xlabel" in self._analysis_config["fig"]:
                         ax[splt_x].set_xlabel(self._analysis_config["fig"]["xlabel"])
@@ -316,7 +320,7 @@ class Analysis():
                 else:
                     ax = plot_by_type(ax, x, y, self._analysis_config["fig"]["type"], self._analysis_config["fig"]["kwargs"])
                     ax.set_title(data["plot"][i])
-                    ax.legend(data["data"][i][j]["legend"])
+                    ax.legend(plt_legend)
                     
                     if "xlabel" in self._analysis_config["fig"]:
                         ax.set_xlabel(self._analysis_config["fig"]["xlabel"])

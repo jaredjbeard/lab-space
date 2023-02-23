@@ -5,8 +5,8 @@
     "expt_name": "",
     "data_path": "",
     "data_file": null,
-    "analysis_path": "/home/jared/Data/IROS_2023_AAGS_Data/config/",
-    "analysis_file": "test.json",
+    "analysis_path": "/home/jared/decision-making/decision_making/config/analysis/",
+    "analysis_file": "max_samples_vs_r.json",
     "figure_path": "",
     "figure_file": "test",
     "experiments": {

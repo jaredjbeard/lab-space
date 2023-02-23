@@ -41,6 +41,7 @@ if __name__=='__main__':
 
     parser = argparse.ArgumentParser(description='Lab Space Analysis CLI')
     parser.add_argument('-r',   '--run',           action="store_const", const=True,  help='Runs analysis, if unspecified runs user default')
+    parser.add_argument('-ra',  '--run_all',       action="store_const", const=True,  help='Runs all analysis in path')
     
     parser.add_argument('-cr',  '--configure_reset', action="store_const", const=True, help='Resets all configuration to factory default')
     parser.add_argument('-cp',  '--configure_path',                 type=str, nargs=  1, help='Configures path of config and data files')
@@ -59,6 +60,7 @@ if __name__=='__main__':
     parser.add_argument('-azv',  '--z_variable',                    type=str, nargs=  1, help='Specifies the z variable')
     parser.add_argument('-acv',  '--control_variable',              type=str, nargs="+", help='Specifies the cross reference variable: generates subplots for each value of the control and all together. Can optionally add number of bins if too many values')
     parser.add_argument('-al',   '--log_level',                     type=str, nargs=  1, help='Sets log level')
+    parser.add_argument('-ar',   '--render',           action="store_const", const=True, help='Renders figures')
     
     parser.add_argument('-m',    '--merge',                         type=str, nargs="+", help='Merges data from a list of files into a single file, uses the last file name as the save file name')
 
@@ -103,7 +105,10 @@ if __name__=='__main__':
     if args.configure_analysis_file is not None:
         core_config["analysis_file"] = args.configure_analysis_file[0]
         rc.write_file(current + CORE_FILE_NAME, core_config)
-    analysis_config = rc.read_file(core_config["analysis_path"] + core_config["analysis_file"])
+    if args.run_all is not None and not args.run_all:
+        analysis_config = rc.read_file(core_config["analysis_path"] + core_config["analysis_file"])
+    else:
+        analysis_config = {}
         
     if args.configure_figure_path is not None:
         core_config["figure_path"] = args.configure_figure_path[0]
@@ -134,6 +139,8 @@ if __name__=='__main__':
         analysis_config["log_level"] = args.log_level[0]
     elif "log_level" not in analysis_config:
         analysis_config["log_level"] = "WARNING"
+    if args.render is not None and args.render:
+        analysis_config["render"] = True
         
     # Save --------------------------------------------------------------------------------------------
     if args.save is not None and args.save:
@@ -151,6 +158,19 @@ if __name__=='__main__':
         rc.print_config(analysis_config)
 
     # Run --------------------------------------------------------------------------------------------
+    if args.run_all is not None and args.run_all:
+        file_names = os.listdir(core_config["analysis_path"])
+        for name in file_names:
+            if name.endswith(".json"):
+                analysis_config = rc.read_file(core_config["analysis_path"] + name)
+                analysis_config["data_file"] = analysis_config["data_path"] + analysis_config["data_file"]
+                analysis_config["figure_file"] = analysis_config["figure_path"] + analysis_config["figure_file"]
+                print(analysis_config["data_file"])
+                if args.render is not None and args.render:
+                    analysis_config["render"] = True
+                analysis = Analysis(analysis_config, analysis_config["log_level"])
+                analysis.run()
+                
     if args.run is not None and args.run:
         analysis_config["data_file"] = analysis_config["data_path"] + analysis_config["data_file"]
         analysis_config["figure_file"] = analysis_config["figure_path"] + analysis_config["figure_file"]

@@ -166,6 +166,7 @@ class Experiment():
         :return: () n copies of the input sequences
         """
         for i in range(n):
+            self._log.warn(str(i))
             if isinstance(iterable_el, list):
                 for el in iterable_el:
                     yield el

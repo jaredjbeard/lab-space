@@ -33,8 +33,7 @@ class Analysis():
     Analyses a set of data.
 
     With regard to saving, in the <figure_path> folder, analysis will add a folder for the given day and time. Within this, it will create the following files:
-        - <figure_file>.csv: The data used for the analysis
-        - <figure_file>.pkl: The figures from the analysis
+        - <figure_file>.pkl: The data and figures from the analysis
         - <figure_file>.png: The figures from the analysis
         - <figure_file>.eps: The figures from the analysis
 
@@ -121,7 +120,7 @@ class Analysis():
         
         data = filter_data(data, self._analysis_config["filter"])
 
-        # print(data)
+        print(data["alpha"])
 
         cr_data = self.cross_reference(data)
         
@@ -142,13 +141,6 @@ class Analysis():
         
         plt_data = self.plot(split_data)
         
-        # self.save(plt_data)
-        # plot
-
-        # save
-
-        # let users pass in kwargs using dictionary to various pd functions
-
     def rm_unused_cols(self):
         """
         Remove unused columns from data
@@ -243,7 +235,7 @@ class Analysis():
         :param data: (list) List of plot data dictionaries
         :return: (list) List of plot data dictionaries and figures
         """
-        if "kwargs" not in self._analysis_config["fig"]:
+        if "kwargs" not in self._analysis_config["fig"] or self._analysis_config["fig"]["kwargs"] is None:
             self._analysis_config["fig"]["kwargs"] = {}
         if len(data) > 1:
             num_plots = len(data["plot"])
@@ -256,6 +248,11 @@ class Analysis():
         fig, ax = plt.subplots(splt_len[0],splt_len[1],figsize=(7.5, 7.5 ))
         splt_x = 0
         splt_y = 0
+        
+        ax.has_been_closed = False
+        def on_close(event):
+            event.canvas.figure.axes[0].has_been_closed = True
+        fig.canvas.mpl_connect('close_event', on_close)
         
         for i in range(num_plots):
             if data["plot"][i] == "all":
@@ -331,9 +328,23 @@ class Analysis():
                     else:
                         ax.set_ylabel(self._analysis_config["y"])
                         
-        plt.show()
-        while 1:
-            plt.pause(1)
+        if "render" in self._analysis_config and self._analysis_config["render"]:
+            plt.show()
+            while not ax.has_been_closed:
+                plt.pause(1)
+                
+        if "figure_file" in self._analysis_config and self._analysis_config["figure_file"] is not None:
+            #fig.tight_layout()
+            fig.subplots_adjust(hspace=0.5, wspace=0.3)
+            
+            fig.savefig(self._analysis_config["figure_file"] + ".eps", format="eps", bbox_inches="tight", pad_inches=0)
+            fig.savefig(self._analysis_config["figure_file"] + ".png", format="png", bbox_inches="tight", pad_inches=0.0)
+            
+            fig_data = { "fig_data": data, "fig": fig, "ax": ax }
+            with open(self._analysis_config["figure_file"] + ".pkl", "wb") as f:
+                pkl.dump(fig_data, f)
+            
+            
 
 def plot_by_type(ax, x, y, plot_type, plot_kwargs = None):
     """

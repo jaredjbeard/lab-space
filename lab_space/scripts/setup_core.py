@@ -23,11 +23,11 @@ if __name__ == "__main__":
     with open(parent + CORE_DEFAULT_FILE_NAME, 'rb') as f:
         config = json.load(f)
 
-    config["trial_path"] = parent + "/config/"
-    config["expt_path"] = parent + "/config/"
-    config["save_path"] = parent + "/results/"
-    config["analysis_path"] = parent + "/config/"
-    config["figure_path"] = parent + "/analysis/"
+    config["trial_path"] = parent + "/config/trial/"
+    config["expt_path"] = parent + "/config/expt/"
+    config["data_path"] = parent + "/results/"
+    config["analysis_path"] = parent + "/config/analysis/"
+    config["figure_path"] = parent + "/figs/"
 
     with open(parent + CORE_DEFAULT_FILE_NAME, 'w') as f:
         json.dump(config, f, indent=4)

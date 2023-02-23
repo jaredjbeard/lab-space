@@ -252,6 +252,7 @@ class Analysis():
         if splt_len[0]*splt_len[1] < num_plots:
             splt_len = [int(np.ceil(np.sqrt(num_plots))), int(np.ceil(np.sqrt(num_plots)))]
         fig, ax = plt.subplots(splt_len[0],splt_len[1],figsize=(7.5, 7.5 ))
+        print(num_plots, splt_len)
         splt_x = 0
         splt_y = 0
         
@@ -294,11 +295,6 @@ class Analysis():
                     else:
                         ax[splt_x,splt_y].set_ylabel(self._analysis_config["y"])
                         
-                    if splt_y == splt_len[1]-1:
-                        splt_y = 0
-                        splt_x += 1
-                    else:
-                        splt_y += 1
                 elif splt_len[0] > 1:
                     ax[splt_x] = plot_by_type(ax[splt_x], x, y, self._analysis_config["fig"]["type"], self._analysis_config["fig"]["kwargs"])
                     ax[splt_x].set_title(data["plot"][i])
@@ -327,6 +323,11 @@ class Analysis():
                         ax.set_ylabel(self._analysis_config["fig"]["ylabel"])
                     else:
                         ax.set_ylabel(self._analysis_config["y"])
+            if splt_len[0] > 1 and splt_y == splt_len[1]-1:
+                splt_y = 0
+                splt_x += 1
+            elif splt_len[0] > 1:
+                splt_y += 1
           
         if "figure_file" in self._analysis_config and self._analysis_config["figure_file"] is not None:
             #fig.tight_layout()

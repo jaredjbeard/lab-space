@@ -182,10 +182,10 @@ if __name__=='__main__':
     if "data_path" not in expt_config:
         expt_config["data_path"] = core_config["data_path"]
     if args.configure_data_file is not None:
-        if args.data_file[0] == "none":
+        if args.configure_data_file[0] == "none":
             expt_config["data_file"] = None
         else:
-            expt_config["data_file"] = args.data_file[0]
+            expt_config["data_file"] = args.configure_data_file[0]
     if "data_file" not in expt_config:
         expt_config["data_file"] = core_config["data_file"]
 

@@ -120,8 +120,8 @@ class Analysis():
         
         data = filter_data(data, self._analysis_config["filter"])
 
-        print(data["alpha"])
-
+        self.compile_bins(data)
+        
         cr_data = self.cross_reference(data)
         
         # for el in cr_data:
@@ -129,7 +129,7 @@ class Analysis():
         #     print(el["legend"])
         #     print(el["data"])
             
-        self.compile_bins(cr_data)
+        
 
         split_data = self.split_data(cr_data)
         
@@ -197,6 +197,8 @@ class Analysis():
             include_cols = [ self._analysis_config["x"], self._analysis_config["y"]]
             if self._analysis_config["z"] is not None:
                 include_cols.append(self._analysis_config["z"])
+            if self._analysis_config["control"] is not None:
+                include_cols.append(self._analysis_config["control"])
             temp = {"legend": el["legend"], "data": include_cols_filter(el["data"], include_cols)}
             split_data.append(temp)
                 
@@ -206,7 +208,7 @@ class Analysis():
             for name, bin in zip(self._analysis_config["control_kwargs"]["names"], self._analysis_config["control_kwargs"]["bins"]):
                 temp_data = []
                 for el in split_data:
-                    temp_data.append(data_logic(el["data"], bin))
+                    temp_data.append({"legend": el["legend"], "data" : el["data"][data_logic(el["data"], bin)]})
                 plot_data["plot"].append(name)
                 plot_data["data"].append(temp_data)
         
@@ -223,8 +225,12 @@ class Analysis():
         if self._analysis_config["control"] is not None:
             if "control_kwargs" not in self._analysis_config:
                 self._analysis_config["control_kwargs"] = {}
-            if "bins" in self._analysis_config["control_kwargs"]:
-                self._analysis_config["control_kwargs"]["bins"] = self._analysis_config["control_kwargs"]["bins"]
+            if not "bins" in self._analysis_config["control_kwargs"]:
+                self._analysis_config["control_kwargs"]["bins"] = {}
+            if "bins" not in self._analysis_config["control_kwargs"]["bins"]:
+                self._analysis_config["control_kwargs"]["bins"].update({"bins" : data[self._analysis_config["control"]].unique().tolist()})
+            if "as_interval" not in self._analysis_config["control_kwargs"]["bins"]:
+                self._analysis_config["control_kwargs"]["bins"].update({"as_interval" : True})
             bin_names, control_bins = bin_control(data, self._analysis_config["control"], self._analysis_config["control_kwargs"]["bins"])
             self._analysis_config["control_kwargs"] = {"names": bin_names, "bins": control_bins}
             
@@ -249,15 +255,11 @@ class Analysis():
         splt_x = 0
         splt_y = 0
         
-        ax.has_been_closed = False
-        def on_close(event):
-            event.canvas.figure.axes[0].has_been_closed = True
-        fig.canvas.mpl_connect('close_event', on_close)
+        fignum = fig.number
         
         for i in range(num_plots):
             if data["plot"][i] == "all":
                 data["plot"][i] = self._analysis_config["fig"]["title"]
-            print(data["data"][i])
             #series (legend) loop
             plt_legend = []
             for j in range(len(data["data"][i])):
@@ -267,9 +269,7 @@ class Analysis():
                 subset_grouped = subset.groupby(self._analysis_config["x"])
                 if "avg" in self._analysis_config and self._analysis_config["avg"] is not None:
                     x = list(subset_grouped.groups.keys())
-                    print(x)
                     y = subset_grouped[self._analysis_config["y"]].mean().tolist()
-                    print(y)
                 else:
                     x = subset[self._analysis_config["x"]].tolist()
                     y = subset[self._analysis_config["y"]].tolist()
@@ -327,12 +327,7 @@ class Analysis():
                         ax.set_ylabel(self._analysis_config["fig"]["ylabel"])
                     else:
                         ax.set_ylabel(self._analysis_config["y"])
-                        
-        if "render" in self._analysis_config and self._analysis_config["render"]:
-            plt.show()
-            while not ax.has_been_closed:
-                plt.pause(1)
-                
+          
         if "figure_file" in self._analysis_config and self._analysis_config["figure_file"] is not None:
             #fig.tight_layout()
             fig.subplots_adjust(hspace=0.5, wspace=0.3)
@@ -343,6 +338,15 @@ class Analysis():
             fig_data = { "fig_data": data, "fig": fig, "ax": ax }
             with open(self._analysis_config["figure_file"] + ".pkl", "wb") as f:
                 pkl.dump(fig_data, f)
+        
+        if "render" in self._analysis_config and self._analysis_config["render"]:
+            plt.show()
+            while plt.fignum_exists(fignum):
+                plt.pause(1)
+        else:
+            plt.close(fig)
+                
+        
             
             
 
@@ -412,7 +416,7 @@ def bin_control(data : pd.DataFrame, control : str, bins : dict = {}):
         bin_names = bins["labels"]
     
     control_bins = []
-    if isinstance(bin_vals[i], str) or bins == {}:
+    if isinstance(bin_vals[0], str) or bins == {} or not bins["as_interval"]:
         for i in range(len(bin_vals)):
             bin_names.append(control + " " + str(bin_vals[i]))
             control_bins.append({"col":control, "op": "=", "val": bin_vals[i]}) 
@@ -469,13 +473,10 @@ def filter_data(data : pd.DataFrame, filter_config : dict):
     :return: (pd.DataFrame) filtered data
     """
     if "include_cols" in filter_config and filter_config["include_cols"] is not None:
-        print(1)
         data = include_cols_filter(data, filter_config["include_cols"])
     if "exclude_cols" in filter_config and filter_config["exclude_cols"] is not None:
-        print(2)
         data = exclude_cols_filter(data, filter_config["exclude_cols"])
     if "logic" in filter_config and filter_config["logic"] is not None:
-        print(3)
         return data[data_logic(data, filter_config["logic"])]
     return data
 

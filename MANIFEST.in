@@ -1,3 +1,6 @@
-include lab_space/config/*json
+include lab_space/config/analysis/*json
+include lab_space/config/trial/*json
+include lab_space/config/expt/*json
 include lab_space/config/core/*.json
+include lab_space/results/*csv
 include lab_space/scripts/*.bash

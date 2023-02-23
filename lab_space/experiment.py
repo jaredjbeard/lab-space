@@ -36,8 +36,8 @@ class Experiment():
         - "experiment": (func) Reference to function under test
         - "n_trials": (int) Number of trials to run for each set of parameters, *default*: 1
         - "n_processes": (int) Number of processes to use, *default*: 1
-        - "save_file": (str) file to save data, if none does not save, *default*: None
-        - "clear_save": (bool) clears data from pickle before running experiment, *default*: False
+        - "data_file": (str) file to data data, if none does not data, *default*: None
+        - "clear_data": (bool) clears data from pickle before running experiment, *default*: False
     :param log_level: (str) Logging level, *default*: "WARNING"
     """
     def __init__(self, trial_config = None, expt_config : dict = None, log_level : str = "WARNING"):
@@ -79,13 +79,13 @@ class Experiment():
             self._expt_config["n_trials"] = 1
         if "n_processes" not in self._expt_config:
             self._expt_config["n_processes"] = 1
-        if "save_file" not in self._expt_config:
-            self._expt_config["save_file"] = None
-        if "clear_save" not in self._expt_config:
-            self._expt_config["clear_save"] = False
-        if self._expt_config["clear_save"] and self._expt_config["save_file"] is not None and os.path.isfile(self._expt_config["save_file"]):
-            self._log.warn("Clearing save file")
-            os.remove(self._expt_config["save_file"])
+        if "data_file" not in self._expt_config:
+            self._expt_config["data_file"] = None
+        if "clear_data" not in self._expt_config:
+            self._expt_config["clear_data"] = False
+        if self._expt_config["clear_data"] and self._expt_config["data_file"] is not None and os.path.isfile(self._expt_config["data_file"]):
+            self._log.warn("Clearing data file")
+            os.remove(self._expt_config["data_file"])
 
         self._log.warn("Reset experiment")
 
@@ -124,7 +124,7 @@ class Experiment():
         for trial in self.__n_iterable(self._trial_config, self._expt_config["n_trials"]):
             result = self._expt_config["experiment"](trial)
             results = pd.concat([results, result])
-            if self._expt_config["save_file"] is not None:
+            if self._expt_config["data_file"] is not None:
                 self._save(result)
         return results
 
@@ -139,7 +139,7 @@ class Experiment():
         results = pd.DataFrame()
         with Pool(self._expt_config["n_processes"]) as p:
             for result in p.imap(self._expt_config["experiment"], self.__n_iterable(self._trial_config, self._expt_config["n_trials"])):
-                if self._expt_config["save_file"] is not None:
+                if self._expt_config["data_file"] is not None:
                     self._save(result) 
                 results = pd.concat([results, result])
 
@@ -153,9 +153,9 @@ class Experiment():
         :return: (pandas.DataFrame) data
         """
         with expt_lock:
-            data = import_file(self._expt_config["save_file"])
+            data = import_file(self._expt_config["data_file"])
             data = pd.concat([data, result])
-            export_file(data,self._expt_config["save_file"])
+            export_file(data,self._expt_config["data_file"])
 
     def __n_iterable(self, iterable_el, n = 1):
         """
@@ -166,6 +166,7 @@ class Experiment():
         :return: () n copies of the input sequences
         """
         for i in range(n):
+            self._log.warn(str(i))
             if isinstance(iterable_el, list):
                 for el in iterable_el:
                     yield el

@@ -3,6 +3,11 @@
     "trial_name": "trial_config.json",
     "expt_path": "",
     "expt_name": "expt_config.json",
-    "save_path": "",
+    "data_path": "",
+    "data_file": "data.csv",
+    "analysis_path": "",
+    "analysis_file": "analysis_config.json",
+    "figure_path": "",
+    "figure_file": "test",
     "experiments": { }
 }

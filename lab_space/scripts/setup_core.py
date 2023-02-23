@@ -26,6 +26,8 @@ if __name__ == "__main__":
     config["trial_path"] = parent + "/config/"
     config["expt_path"] = parent + "/config/"
     config["save_path"] = parent + "/results/"
+    config["analysis_path"] = parent + "/config/"
+    config["figure_path"] = parent + "/analysis/"
 
     with open(parent + CORE_DEFAULT_FILE_NAME, 'w') as f:
         json.dump(config, f, indent=4)

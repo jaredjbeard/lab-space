@@ -9,7 +9,11 @@ Experiments
 ###########
 
 The experiment class provides your interface for running experiments. Simply pass the following and we will handle the rest:
+<<<<<<< HEAD
 - a list of dictionaries (or `Reconfigurator File <https://reconfigurator.readthedocs.io/en/latest/markup.html>`_ ) with the parameters for each trial
+=======
+- a list of dictionaries (or ` Reconfigurator File <https://reconfigurator.readthedocs.io/en/latest/markup.html>`_ ) with the parameters for each trial
+>>>>>>> dev
 - a dictionary of experimental parameters (a reference to your experiment function, number of trials, number of processes, where/if to save, and how many repetitions)
 - a logging setting 
 
@@ -68,7 +72,11 @@ Then these parameters can be saved using
 Adding CLI
 **********
 
+<<<<<<< HEAD
 To add Lab Space command line interface in Linux, navigate to `/home/<user>/.local/lib/python<version#>/site-packages/lab-space/`.
 Then run `bash scripts/add_cli.bash`. This will add the reconfigurator CLI to your path. (in the future we may seek to add this at install time).
+=======
+To add Lab Space command line interface in Linux, run `bash /home/<user>/.local/lib/python<version#>/site-packages/lab-space/scripts/add_cli.bash`. This will add the reconfigurator CLI to your path. (in the future we may seek to add this at install time).
+>>>>>>> dev
 
 The reconfigurator can be accessed using `labspace <flag> <args>`. Use `man labspace` for more information.

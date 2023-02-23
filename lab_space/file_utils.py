@@ -15,7 +15,7 @@ sys.path.append(parent)
 
 import pandas as pd
 
-__all__ = ["import_file", "export_file", "create_file"]
+__all__ = ["import_file", "export_file", "create_file", "merge_files"]
 
 def import_file(filepath : str):
     """
@@ -74,3 +74,14 @@ def create_file(file_path : str):
             return "Invalid file type"
         return "Empty file created at: " + file_path
     return "File already exists at: " + file_path
+
+def merge_files(file_list : str):
+    """
+    Merges the data from a list of files into a single pd.DataFrame and saves them at the last file.
+    
+    :param file_list: A list of file names to merge.
+    """
+    data = pd.DataFrame()
+    for file in file_list:
+        data = pd.concat([data, import_file(file)])
+    export_file(data, file_list[-1])

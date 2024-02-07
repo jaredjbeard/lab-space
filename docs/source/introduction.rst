@@ -34,7 +34,9 @@ Experiment Registration
 ***********************
 
 To register an exeriment, you have two options
+
 - `labspace -er <module_path> <module_name> <function_key> <function_name>` for packages which are not installed
+
 - `labspace -er <module_name> <function_key> <function_name>` for packages which are installed
 
 As an example, if I have a test file called `test.py` with a function called `test_func` in the `test` package, I can register it using `labspace -er /home/<user>/test/test.py test_func1 test_func`. I can then run it using `labspace -r -e test_func1`.
@@ -44,39 +46,50 @@ Workspace Setup
 
 To set up my workspace, I can set default paths and files for my trial configurations, and experiments. I can also set my default save path.
 The flags are as follows:
+
 - -cp : configure path
+
 - -ctp : configure trial path
+
 - -ct : configure trial file
+
 - -cep : configure experiment path
+
 - -ce : configure experiment file
+
 - -csp : configure save path
 
 Experiment Setup
 ****************
 
 To modify I an experiment I can use the following flags:
+
 - -tt : number of trials
+
 - -tp : number of processes
+
 - -ts : save file
+
 - -tcs : clear save (use a 1 for true, 0 for false)
+
 - -tl : log level ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+
 - -tc : compile a reconfigurator based config
 
 Then these parameters can be saved using 
+
 - -s : save both
+
 - -se : save experiment (specifiy a file name or use none to save to current file)
+
 - -st : save trial (specifiy a file name or use none to save to current file)
+
 - -p : print
 
 
 Adding CLI
 **********
 
-<<<<<<< HEAD
-To add Lab Space command line interface in Linux, navigate to `/home/<user>/.local/lib/python<version#>/site-packages/lab-space/`.
-Then run `bash scripts/add_cli.bash`. This will add the reconfigurator CLI to your path. (in the future we may seek to add this at install time).
-=======
 To add Lab Space command line interface in Linux, run `bash /home/<user>/.local/lib/python<version#>/site-packages/lab-space/scripts/add_cli.bash`. This will add the reconfigurator CLI to your path. (in the future we may seek to add this at install time).
->>>>>>> dev
 
 The reconfigurator can be accessed using `labspace <flag> <args>`. Use `man labspace` for more information.

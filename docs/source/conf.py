@@ -20,7 +20,28 @@ release = '0.0.1'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.coverage']
+mathjax_path="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.coverage', 'sphinx_math_dollar', 'sphinx.ext.mathjax', 'sphinx.ext.autosectionlabel']
+
+mathjax2_config = {
+    'extensions': ['tex2jax.js'],
+    'jax': ['input/TeX', 'output/HTML-CSS'],
+    'tex2jax': {
+        'inlineMath': [ ["\\(","\\)"] ],
+        'displayMath': [["\\[","\\]"] ],
+        'packages': ['base', 'require']
+    },
+}
+
+mathjax3_config = {
+  'extensions': ['tex2jax.js'],
+  'jax': ['input/TeX', 'output/HTML-CSS'],
+  "tex2jax": {
+    "inlineMath": [['\\(', '\\)']],
+    "displayMath": [["\\[", "\\]"]],
+    'packages': ['base', 'require']
+  }
+}
 
 templates_path = ['_templates']
 exclude_patterns = []

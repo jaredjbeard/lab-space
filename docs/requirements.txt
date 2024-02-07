@@ -1,5 +1,6 @@
 sphinx==5.1.1
 sphinx-rtd-theme
+sphinx_math_dollar
 nestifydict==0.0.9
 toml
 pyyaml

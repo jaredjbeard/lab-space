@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 from reconfigurator.compiler import compile_as_generator
 from copy import deepcopy
 
-from lab_space.scripts.file_utils import *
+from file_utils import *
 
 import nestifydict as nd
 

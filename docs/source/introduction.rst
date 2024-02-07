@@ -9,12 +9,11 @@ Experiments
 ###########
 
 The experiment class provides your interface for running experiments. Simply pass the following and we will handle the rest:
-<<<<<<< HEAD
+
 - a list of dictionaries (or `Reconfigurator File <https://reconfigurator.readthedocs.io/en/latest/markup.html>`_ ) with the parameters for each trial
-=======
-- a list of dictionaries (or ` Reconfigurator File <https://reconfigurator.readthedocs.io/en/latest/markup.html>`_ ) with the parameters for each trial
->>>>>>> dev
+
 - a dictionary of experimental parameters (a reference to your experiment function, number of trials, number of processes, where/if to save, and how many repetitions)
+
 - a logging setting 
 
 These can be passed on initialization or at runtime, if your trials are generated dynamically or from feedback.

@@ -1,4 +1,4 @@
-=========================
+in=========================
 Introduction to Lab Space
 =========================
 
@@ -8,7 +8,19 @@ Lab Space streamlines data collection and post-processing in experiments through
 Experiments
 ###########
 
-The experiment class provides your interface for running experiments. Simply pass the following and we will handle the rest:
+The experiment class provides your interface for running experiments. Simply define the following and we will handle the rest.
+
+First, make a function as follows::
+
+  def my_func(params: dict = {}):
+
+    # experimental details
+
+    # save data to a pd.dataframe.
+
+    return <pd.dataframe>
+
+Then use the CLI to register your experiment with the lab-space backend. Pass the following to run your experiment:
 
 - a list of dictionaries (or `Reconfigurator File <https://reconfigurator.readthedocs.io/en/latest/markup.html>`_ ) with the parameters for each trial
 

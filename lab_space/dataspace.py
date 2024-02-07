@@ -20,8 +20,8 @@ import json
 import reconfigurator.reconfigurator as rc
 from reconfigurator.compiler import compile_as_generator, compile_to_list
 
-from lab_space.scripts.analysis import Analysis
-from lab_space.scripts.file_utils import merge_files
+from analysis import Analysis
+from file_utils import merge_files
 
 
 CORE_FILE_NAME = "/config/core/core.json"

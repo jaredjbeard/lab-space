@@ -55,7 +55,7 @@ As an example, if I have a test file called `test.py` with a function called `te
 Workspace Setup
 ***************
 
-To set up my workspace, I can set default paths and files for my trial configurations, and experiments. I can also set my default save path.
+To set up my workspace, I can set default paths and files for my trial configurations (e.g., number of processess anf experiment to run), and experiments (parameters to run with each experiment). I can also set my default save path for data.
 The flags are as follows:
 
 - -cp : configure path
@@ -68,7 +68,9 @@ The flags are as follows:
 
 - -ce : configure experiment file
 
-- -csp : configure save path
+- -cdp : configure save path
+
+- -cdf : configure save file
 
 Experiment Setup
 ****************

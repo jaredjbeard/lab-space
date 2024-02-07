@@ -10,7 +10,7 @@ Submodules
 Experiments
 -----------
 
-.. autoclass:: lab_space.experiment
+.. automodule:: experiment
    :members:
    :undoc-members:
    :show-inheritance:
@@ -18,16 +18,7 @@ Experiments
 Labspace
 --------
 
-.. automodule:: lab_space.labspace
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: lab_space
+.. automodule:: labspace
    :members:
    :undoc-members:
    :show-inheritance:

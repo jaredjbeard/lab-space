@@ -7,5 +7,6 @@ pyyaml
 traitlets
 reconfigurator
 nestifydict
+matplotlib
 pandas
 -e.

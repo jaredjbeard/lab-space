@@ -22,7 +22,7 @@ from copy import deepcopy
 
 import nestifydict as nd
 
-from file_utils import *
+from lab_space.scripts.file_utils import *
 
 class Experiment():
     """
